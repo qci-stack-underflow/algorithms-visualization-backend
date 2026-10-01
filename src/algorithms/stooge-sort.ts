@@ -1,50 +1,42 @@
-import {
-  buildResult,
-  createStepList,
-  prepareInput,
-  recordFinalState,
-  recordStep,
-} from "./algorithm.utils";
+import { AlgorithmDefinition } from "./algorithm.types";
 
-export function stoogeSort(input: number[]) {
-  const startedAt = Date.now();
-  const array = prepareInput(input);
-  const steps = createStepList();
-  let comparisons = 0;
-  let swaps = 0;
+export const stoogeSort: AlgorithmDefinition = {
+  info: {
+    id: "stooge-sort",
+    name: "Stooge Sort",
+    complexity: { best: "O(n^2.71)", average: "O(n^2.71)", worst: "O(n^2.71)" },
+    description: "Recursividad (lenta)",
+    pseudocode: [
+      "stoogeSort(A, lo, hi)",
+      "  if A[lo] > A[hi]",
+      "    swap(A[lo], A[hi])",
+      "  if hi - lo + 1 > 2",
+      "    k = (hi - lo + 1) / 3",
+      "    stoogeSort(A, lo, hi - k)",
+      "    stoogeSort(A, lo + k, hi)",
+      "    stoogeSort(A, lo, hi - k)",
+    ],
+  },
+  sort(t) {
+    // Sin pasos `range` por llamada: duplicarían el tamaño de la respuesta.
+    const sortRange = (lo: number, hi: number): void => {
+      if (lo >= hi) {
+        return;
+      }
 
-  function sortRange(start: number, end: number): void {
-    if (start >= end) {
-      return;
-    }
+      if (t.compare(lo, hi, 1) > 0) {
+        t.swap(lo, hi, 2);
+      }
 
-    comparisons += 1;
-    recordStep(steps, "compare", [start, end], array);
+      const length = hi - lo + 1;
+      if (length > 2) {
+        const k = Math.floor(length / 3);
+        sortRange(lo, hi - k);
+        sortRange(lo + k, hi);
+        sortRange(lo, hi - k);
+      }
+    };
 
-    if (array[start] > array[end]) {
-      [array[start], array[end]] = [array[end], array[start]];
-      swaps += 1;
-      recordStep(steps, "swap", [start, end], array);
-    }
-
-    const length = end - start + 1;
-    if (length > 2) {
-      const third = Math.floor(length / 3);
-      sortRange(start, end - third);
-      sortRange(start + third, end);
-      sortRange(start, end - third);
-    }
-  }
-
-  sortRange(0, array.length - 1);
-  recordFinalState(steps, array);
-
-  return buildResult(
-    "stooge-sort",
-    input,
-    array,
-    steps,
-    { comparisons, swaps, writes: 0 },
-    startedAt,
-  );
-}
+    sortRange(0, t.length - 1);
+  },
+};

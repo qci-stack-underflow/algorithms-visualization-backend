@@ -1,39 +1,28 @@
-import {
-  buildResult,
-  createStepList,
-  prepareInput,
-  recordFinalState,
-  recordStep,
-} from "./algorithm.utils";
+import { AlgorithmDefinition } from "./algorithm.types";
 
-export function exchangeSort(input: number[]) {
-  const startedAt = Date.now();
-  const array = prepareInput(input);
-  const steps = createStepList();
-  let comparisons = 0;
-  let swaps = 0;
-
-  for (let left = 0; left < array.length - 1; left += 1) {
-    for (let right = left + 1; right < array.length; right += 1) {
-      comparisons += 1;
-      recordStep(steps, "compare", [left, right], array);
-
-      if (array[left] > array[right]) {
-        [array[left], array[right]] = [array[right], array[left]];
-        swaps += 1;
-        recordStep(steps, "swap", [left, right], array);
+export const exchangeSort: AlgorithmDefinition = {
+  info: {
+    id: "exchange-sort",
+    name: "Exchange Sort",
+    complexity: { best: "O(n²)", average: "O(n²)", worst: "O(n²)" },
+    description: "Intercambia entre pares",
+    pseudocode: [
+      "for i = 0 to n-2",
+      "  for j = i+1 to n-1",
+      "    if A[i] > A[j]",
+      "      swap(A[i], A[j])",
+    ],
+  },
+  sort(t) {
+    for (let i = 0; i < t.length - 1; i += 1) {
+      for (let j = i + 1; j < t.length; j += 1) {
+        if (t.compare(i, j, 2) > 0) {
+          t.swap(i, j, 3);
+        }
       }
+
+      // Al terminar cada pasada, la posición i ya tiene su valor final.
+      t.sorted([i]);
     }
-  }
-
-  recordFinalState(steps, array);
-
-  return buildResult(
-    "exchange-sort",
-    input,
-    array,
-    steps,
-    { comparisons, swaps, writes: 0 },
-    startedAt,
-  );
-}
+  },
+};
