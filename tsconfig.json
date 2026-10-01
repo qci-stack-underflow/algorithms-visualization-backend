@@ -1,5 +1,10 @@
 {
   "compilerOptions": {
+    "types":[
+      "jest",
+      "node",
+      "express"
+    ],
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "resolvePackageJsonExports": true,
@@ -12,7 +17,7 @@
     "allowSyntheticDefaultImports": true,
     "target": "ES2023",
     "sourceMap": true,
-    "rootDir": "./src",
+    "rootDir": "./",
     "outDir": "./dist",
     "incremental": true,
     "skipLibCheck": true,
@@ -22,5 +27,5 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
   },
-  "include": ["./src"]
+  "include": ["./src", "./test"]
 }
