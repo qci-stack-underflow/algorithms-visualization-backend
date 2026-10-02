@@ -1,20 +1,20 @@
-import { AlgorithmDefinition } from "./algorithm.types";
+import { AlgorithmDefinition } from './algorithm.types';
 
 export const stoogeSort: AlgorithmDefinition = {
   info: {
-    id: "stooge-sort",
-    name: "Stooge Sort",
-    complexity: { best: "O(n^2.71)", average: "O(n^2.71)", worst: "O(n^2.71)" },
-    description: "Recursividad (lenta)",
+    id: 'stooge-sort',
+    name: 'Stooge Sort',
+    complexity: { best: 'O(n^2.71)', average: 'O(n^2.71)', worst: 'O(n^2.71)' },
+    description: 'Recursividad (lenta)',
     pseudocode: [
-      "stoogeSort(A, lo, hi)",
-      "  if A[lo] > A[hi]",
-      "    swap(A[lo], A[hi])",
-      "  if hi - lo + 1 > 2",
-      "    k = (hi - lo + 1) / 3",
-      "    stoogeSort(A, lo, hi - k)",
-      "    stoogeSort(A, lo + k, hi)",
-      "    stoogeSort(A, lo, hi - k)",
+      'stoogeSort(A, lo, hi)',
+      '  if A[lo] > A[hi]',
+      '    swap(A[lo], A[hi])',
+      '  if hi - lo + 1 > 2',
+      '    k = (hi - lo + 1) / 3',
+      '    stoogeSort(A, lo, hi - k)',
+      '    stoogeSort(A, lo + k, hi)',
+      '    stoogeSort(A, lo, hi - k)',
     ],
   },
   sort(t) {

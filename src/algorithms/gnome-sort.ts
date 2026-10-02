@@ -1,19 +1,19 @@
-import { AlgorithmDefinition } from "./algorithm.types";
+import { AlgorithmDefinition } from './algorithm.types';
 
 export const gnomeSort: AlgorithmDefinition = {
   info: {
-    id: "gnome-sort",
-    name: "Gnome Sort",
-    complexity: { best: "O(n)", average: "O(n²)", worst: "O(n²)" },
-    description: "Intercambia entre elementos adyacentes",
+    id: 'gnome-sort',
+    name: 'Gnome Sort',
+    complexity: { best: 'O(n)', average: 'O(n²)', worst: 'O(n²)' },
+    description: 'Intercambia entre elementos adyacentes',
     pseudocode: [
-      "i = 1",
-      "while i < n",
-      "  if A[i-1] <= A[i]",
-      "    i = i + 1",
-      "  else",
-      "    swap(A[i-1], A[i])",
-      "    i = max(1, i - 1)",
+      'i = 1',
+      'while i < n',
+      '  if A[i-1] <= A[i]',
+      '    i = i + 1',
+      '  else',
+      '    swap(A[i-1], A[i])',
+      '    i = max(1, i - 1)',
     ],
   },
   sort(t) {

@@ -1,16 +1,16 @@
-import { AlgorithmDefinition } from "./algorithm.types";
+import { AlgorithmDefinition } from './algorithm.types';
 
 export const exchangeSort: AlgorithmDefinition = {
   info: {
-    id: "exchange-sort",
-    name: "Exchange Sort",
-    complexity: { best: "O(n²)", average: "O(n²)", worst: "O(n²)" },
-    description: "Intercambia entre pares",
+    id: 'exchange-sort',
+    name: 'Exchange Sort',
+    complexity: { best: 'O(n²)', average: 'O(n²)', worst: 'O(n²)' },
+    description: 'Intercambia entre pares',
     pseudocode: [
-      "for i = 0 to n-2",
-      "  for j = i+1 to n-1",
-      "    if A[i] > A[j]",
-      "      swap(A[i], A[j])",
+      'for i = 0 to n-2',
+      '  for j = i+1 to n-1',
+      '    if A[i] > A[j]',
+      '      swap(A[i], A[j])',
     ],
   },
   sort(t) {

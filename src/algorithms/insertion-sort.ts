@@ -1,17 +1,17 @@
-import { AlgorithmDefinition } from "./algorithm.types";
+import { AlgorithmDefinition } from './algorithm.types';
 
 export const insertionSort: AlgorithmDefinition = {
   info: {
-    id: "insertion-sort",
-    name: "Insertion Sort",
-    complexity: { best: "O(n)", average: "O(n²)", worst: "O(n²)" },
-    description: "Inserción en la parte ya ordenada",
+    id: 'insertion-sort',
+    name: 'Insertion Sort',
+    complexity: { best: 'O(n)', average: 'O(n²)', worst: 'O(n²)' },
+    description: 'Inserción en la parte ya ordenada',
     pseudocode: [
-      "for i = 1 to n-1",
-      "  j = i",
-      "  while j > 0 and A[j-1] > A[j]",
-      "    swap(A[j-1], A[j])",
-      "    j = j - 1",
+      'for i = 1 to n-1',
+      '  j = i',
+      '  while j > 0 and A[j-1] > A[j]',
+      '    swap(A[j-1], A[j])',
+      '    j = j - 1',
     ],
   },
   sort(t) {
