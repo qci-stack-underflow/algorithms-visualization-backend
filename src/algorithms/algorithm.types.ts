@@ -1,5 +1,5 @@
 /**
- * Contrato de los algoritmos de ordenamiento (PROPUESTA, pendiente de acordar en #7).
+ * Contrato de los algoritmos de ordenamiento.
  *
  * Define qué recibe cada algoritmo, qué devuelve la API y qué pasos
  * recibe el frontend para animar el ordenamiento.
@@ -10,20 +10,20 @@
 // ---------------------------------------------------------------------------
 
 export const ALGORITHM_IDS = [
-  "bubble-sort",
-  "selection-sort",
-  "insertion-sort",
-  "stooge-sort",
-  "gnome-sort",
-  "exchange-sort",
-  "merge-sort",
-  "quick-sort",
+  'bubble-sort',
+  'selection-sort',
+  'insertion-sort',
+  'stooge-sort',
+  'gnome-sort',
+  'exchange-sort',
+  'merge-sort',
+  'quick-sort',
 ] as const;
 
 export type AlgorithmId = (typeof ALGORITHM_IDS)[number];
 
 /** Clase de complejidad promedio, usada por el filtro del frontend. */
-export type ComplexityClass = "O(n log n)" | "O(n²)" | "O(n^2.71)";
+export type ComplexityClass = 'O(n log n)' | 'O(n²)' | 'O(n^2.71)';
 
 export interface AlgorithmInfo {
   id: AlgorithmId;
@@ -50,19 +50,19 @@ export interface AlgorithmInfo {
  */
 export type AlgorithmStep =
   /** Se comparan las posiciones `indices[0]` e `indices[1]`. */
-  | { type: "compare"; indices: [number, number]; line: number }
+  | { type: 'compare'; indices: [number, number]; line: number }
   /** Se intercambian las posiciones `indices[0]` e `indices[1]`. */
-  | { type: "swap"; indices: [number, number]; line: number }
+  | { type: 'swap'; indices: [number, number]; line: number }
   /** Se escribe `value` en la posición `index` (Merge Sort). */
-  | { type: "write"; index: number; value: number; line: number }
+  | { type: 'write'; index: number; value: number; line: number }
   /** La posición `index` es el pivote actual (Quick Sort). */
-  | { type: "pivot"; index: number; line: number }
+  | { type: 'pivot'; index: number; line: number }
   /** Subarreglo activo `[start, end]` (algoritmos recursivos). */
-  | { type: "range"; start: number; end: number; line: number }
+  | { type: 'range'; start: number; end: number; line: number }
   /** Estas posiciones ya están en su lugar final. */
-  | { type: "sorted"; indices: number[]; line?: number };
+  | { type: 'sorted'; indices: number[]; line?: number };
 
-export type AlgorithmStepType = AlgorithmStep["type"];
+export type AlgorithmStepType = AlgorithmStep['type'];
 
 // ---------------------------------------------------------------------------
 // Resultado de una ejecución (POST /algorithms/:id/run y /compare)
