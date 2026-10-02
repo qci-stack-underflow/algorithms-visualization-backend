@@ -90,7 +90,7 @@ export const insertionSort: AlgorithmDefinition = {
 
 ### Ejecución y métricas
 
-`runAlgorithm(definition, input)` es la única función que debe llamar el controlador. Valida la entrada y ejecuta el algoritmo dos veces sobre copias de `input`:
+`runAlgorithm(definition, input)` valida la entrada y ejecuta el algoritmo dos veces sobre copias de `input`:
 
 1. Con `RecordingTracer`: obtiene los pasos, los contadores y el arreglo ordenado.
 2. Con `CountingTracer`: no guarda pasos y mide el tiempo con `performance.now()`.
@@ -102,3 +102,22 @@ export const insertionSort: AlgorithmDefinition = {
 | `writes` | `CountingTracer.write` |
 | `steps` | Tamaño de la lista de pasos |
 | `executionTimeMs` | `runAlgorithm`, en la segunda ejecución |
+
+### Servicio para las rutas
+
+`AlgorithmsModule` ([`src/algorithms/algorithms.module.ts`](src/algorithms/algorithms.module.ts)) exporta `AlgorithmsService`, que es lo que deben usar los controladores. Convierte los errores de entrada en respuestas HTTP:
+
+| Método | Uso sugerido | Errores |
+|---|---|---|
+| `findAll()` | `GET /algorithms`: lista de `AlgorithmInfo` | — |
+| `findOne(id)` | `GET /algorithms/:id`: ficha de un algoritmo | 404 si el id no existe |
+| `run(id, input)` | `POST /algorithms/:id/run` con `{ "input": number[] }` | 404 si el id no existe, 400 si la entrada es inválida |
+| `compare(ids, input)` | `POST /algorithms/compare` con `{ "algorithms": string[], "input": number[] }` | 400 con menos de dos ids o ids repetidos, 404 si algún id no existe, 400 si la entrada es inválida |
+
+Los algoritmos disponibles se registran en [`src/algorithms/algorithms.registry.ts`](src/algorithms/algorithms.registry.ts). Para agregar uno nuevo, se crea su archivo y se añade a `ALGORITHM_DEFINITIONS`; las pruebas de `algorithms.spec.ts` lo cubren automáticamente.
+
+### Pruebas
+
+```bash
+pnpm test
+```
