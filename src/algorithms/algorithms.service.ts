@@ -3,13 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { runAlgorithm } from './algorithm.tracer';
+import { runAlgorithm } from '@algorithm/util/algorithm.tracer';
 import {
   AlgorithmDefinition,
   AlgorithmInfo,
   AlgorithmResult,
-} from './algorithm.types';
-import { ALGORITHM_DEFINITIONS } from './algorithms.registry';
+} from '@type/algorithm.types';
+import { ALGORITHM_DEFINITIONS } from '@algorithm/util/algorithms.registry';
 
 @Injectable()
 export class AlgorithmsService {
