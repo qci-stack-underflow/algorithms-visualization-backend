@@ -29,8 +29,8 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "@type/*": ["./src/types/*"],
-      "@algorithm/*":["./src/algorithms/definitions/*"],
-      "@algorithm/util/*": ["./src/algorithms/utils/*"]
+      "@algorithm/util/*": ["./src/algorithms/utils/*"],
+      "@algorithm/*":["./src/algorithms/definitions/*"]
     }
   },
   "include": ["./src/**/*", "./test/**/*"]
