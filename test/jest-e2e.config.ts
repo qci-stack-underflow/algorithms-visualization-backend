@@ -6,10 +6,9 @@ const tsJestTransformCfg = createDefaultPreset().transform;
 
 /** @type {import("jest").Config} **/
 export default {
-  moduleFileExtensions: ['js', 'json', 'ts'],
+  testEnvironment: 'node',
   rootDir: '..',
   testMatch: ['<rootDir>/test/**/*.e2e-spec.ts'],
-  testEnvironment: 'node',
   transform: {
     ...tsJestTransformCfg,
   },
