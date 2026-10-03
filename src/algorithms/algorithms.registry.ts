@@ -1,7 +1,11 @@
 import { AlgorithmDefinition } from '@type/algorithm.types';
+import { bubbleSort } from './bubble-sort';
 import { exchangeSort } from './exchange-sort';
 import { gnomeSort } from './gnome-sort';
 import { insertionSort } from './insertion-sort';
+import { mergeSort } from './merge-sort';
+import { quickSort } from './quick-sort';
+import { selectionSort } from './selection-sort';
 import { stoogeSort } from './stooge-sort';
 
 /**
@@ -9,8 +13,12 @@ import { stoogeSort } from './stooge-sort';
  * importarlo y añadirlo a esta lista.
  */
 export const ALGORITHM_DEFINITIONS: readonly AlgorithmDefinition[] = [
+  bubbleSort,
+  selectionSort,
   insertionSort,
-  gnomeSort,
   stoogeSort,
+  gnomeSort,
   exchangeSort,
+  mergeSort,
+  quickSort,
 ];
