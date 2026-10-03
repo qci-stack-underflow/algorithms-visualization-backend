@@ -1,4 +1,4 @@
-import { AlgorithmDefinition } from './algorithm.types';
+import { AlgorithmDefinition } from '@type/algorithm.types';
 
 export const gnomeSort: AlgorithmDefinition = {
   info: {

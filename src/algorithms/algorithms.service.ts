@@ -8,7 +8,7 @@ import {
   AlgorithmDefinition,
   AlgorithmInfo,
   AlgorithmResult,
-} from './algorithm.types';
+} from '@type/algorithm.types';
 import { ALGORITHM_DEFINITIONS } from './algorithms.registry';
 
 @Injectable()

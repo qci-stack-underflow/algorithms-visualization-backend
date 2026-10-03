@@ -3,7 +3,7 @@ import {
   AlgorithmDefinition,
   AlgorithmStep,
   MAX_INPUT_LENGTH,
-} from './algorithm.types';
+} from '@type/algorithm.types';
 import { ALGORITHM_DEFINITIONS } from './algorithms.registry';
 
 const edgeCases: { name: string; input: number[] }[] = [

@@ -1,4 +1,4 @@
-import { AlgorithmDefinition } from './algorithm.types';
+import { AlgorithmDefinition } from '@type/algorithm.types';
 import { exchangeSort } from './exchange-sort';
 import { gnomeSort } from './gnome-sort';
 import { insertionSort } from './insertion-sort';
