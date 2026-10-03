@@ -28,7 +28,9 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@type/*": ["./src/types/*"]
+      "@type/*": ["./src/types/*"],
+      "@algorithm/*":["./src/algorithms/definitions/*"],
+      "@algorithm/util/*": ["./src/algorithms/utils/*"]
     }
   },
   "include": ["./src/**/*", "./test/**/*"]

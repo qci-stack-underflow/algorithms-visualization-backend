@@ -1,10 +1,10 @@
-import { runAlgorithm } from './algorithm.tracer';
+import { runAlgorithm } from '@algorithm/util/algorithm.tracer';
 import {
   AlgorithmDefinition,
   AlgorithmStep,
   MAX_INPUT_LENGTH,
 } from '@type/algorithm.types';
-import { ALGORITHM_DEFINITIONS } from './algorithms.registry';
+import { ALGORITHM_DEFINITIONS } from '@algorithm/util/algorithms.registry';
 
 const edgeCases: { name: string; input: number[] }[] = [
   { name: 'vacío', input: [] },
