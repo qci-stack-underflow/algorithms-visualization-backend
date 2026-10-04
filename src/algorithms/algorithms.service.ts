@@ -1,15 +1,11 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { runAlgorithm } from '@algorithm/util/algorithm.tracer';
 import {
   AlgorithmDefinition,
   AlgorithmInfo,
   AlgorithmResult,
 } from '@type/algorithm.types';
-import { ALGORITHM_DEFINITIONS } from '@algorithm/util/algorithms.registry';
+import { ALGORITHM_DEFINITIONS } from './utils/algorithms.registry';
 
 @Injectable()
 export class AlgorithmsService {
@@ -35,7 +31,9 @@ export class AlgorithmsService {
       return runAlgorithm(definition, input);
     } catch (error) {
       if (error instanceof TypeError || error instanceof RangeError) {
-        throw new BadRequestException(error.message);
+        throw new Error(error.message, {
+          cause: "bad-array"
+        });
       }
       throw error;
     }
@@ -48,13 +46,11 @@ export class AlgorithmsService {
       ids.length < 2 ||
       ids.some((id) => typeof id !== 'string')
     ) {
-      throw new BadRequestException(
-        'At least two algorithm ids are required to compare.',
-      );
+      throw new Error('At least two algorithm ids are required to compare.');
     }
 
     if (new Set(ids).size !== ids.length) {
-      throw new BadRequestException('Algorithm ids cannot be repeated.');
+      throw new Error('Algorithm ids cannot be repeated.');
     }
 
     const algorithmIds = ids as string[];
@@ -66,7 +62,9 @@ export class AlgorithmsService {
   private getDefinition(id: string): AlgorithmDefinition {
     const definition = this.definitions.get(id);
     if (!definition) {
-      throw new NotFoundException(`Algorithm "${id}" does not exist.`);
+      throw new Error(`Algorithm "${id}" does not exist.`, {
+        cause: 'unknown-id',
+      });
     }
     return definition;
   }
