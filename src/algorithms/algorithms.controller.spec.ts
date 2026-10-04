@@ -27,7 +27,7 @@ describe('AlgorithmsController', () => {
     const algorithms = [{ id: 'bubble-sort', name: 'Bubble Sort' }];
     mockAlgorithmsService.findAll.mockReturnValue(algorithms);
 
-    expect(controller.getAlgorithms()).toEqual(algorithms);
+    expect(controller.findAll()).toEqual(algorithms);
     expect(mockAlgorithmsService.findAll).toHaveBeenCalledTimes(1);
   });
 });
