@@ -5,7 +5,7 @@ import {
   AlgorithmInfo,
   AlgorithmResult,
 } from '@type/algorithm.types';
-import { ALGORITHM_DEFINITIONS } from './utils/algorithms.registry';
+import { ALGORITHM_DEFINITIONS } from '@algorithm/util/algorithms.registry';
 
 @Injectable()
 export class AlgorithmsService {
@@ -13,17 +13,14 @@ export class AlgorithmsService {
     ALGORITHM_DEFINITIONS.map((definition) => [definition.info.id, definition]),
   );
 
-  /** Catálogo para GET /algorithms. */
   findAll(): AlgorithmInfo[] {
     return [...this.definitions.values()].map((definition) => definition.info);
   }
 
-  /** Ficha de un algoritmo; 404 si el id no existe. */
   findOne(id: string): AlgorithmInfo {
     return this.getDefinition(id).info;
   }
 
-  /** Ejecuta un algoritmo; 404 si el id no existe, 400 si la entrada es inválida. */
   run(id: string, input: unknown): AlgorithmResult {
     const definition = this.getDefinition(id);
 
@@ -39,7 +36,6 @@ export class AlgorithmsService {
     }
   }
 
-  /** Ejecuta varios algoritmos, cada uno sobre su propia copia del mismo arreglo. */
   compare(ids: unknown, input: unknown): AlgorithmResult[] {
     if (
       !Array.isArray(ids) ||
