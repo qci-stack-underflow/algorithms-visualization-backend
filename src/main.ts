@@ -1,10 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { SecretsService } from './secrets/secrets.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const port = process.env.PORT ?? 3000;
-
+  const secrets = app.get(SecretsService);
+  const port = secrets.PORT;
+  
   app.enableCors();
 
   await app.listen(port, () => console.log(`listening app at port ${port}`));
