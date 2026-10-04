@@ -32,7 +32,7 @@ export class AlgorithmsService {
     } catch (error) {
       if (error instanceof TypeError || error instanceof RangeError) {
         throw new Error(error.message, {
-          cause: "bad-array"
+          cause: 'bad-array',
         });
       }
       throw error;
@@ -46,11 +46,15 @@ export class AlgorithmsService {
       ids.length < 2 ||
       ids.some((id) => typeof id !== 'string')
     ) {
-      throw new Error('At least two algorithm ids are required to compare.');
+      throw new Error('At least two algorithm ids are required to compare.', {
+        cause: 'bad-ids',
+      });
     }
 
     if (new Set(ids).size !== ids.length) {
-      throw new Error('Algorithm ids cannot be repeated.');
+      throw new Error('Algorithm ids cannot be repeated.', {
+        cause: 'algorithms-repeat',
+      });
     }
 
     const algorithmIds = ids as string[];
