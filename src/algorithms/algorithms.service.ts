@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { runAlgorithm } from '@algorithm/util/algorithm.tracer';
 import {
   AlgorithmDefinition,
@@ -17,17 +13,14 @@ export class AlgorithmsService {
     ALGORITHM_DEFINITIONS.map((definition) => [definition.info.id, definition]),
   );
 
-  /** Catálogo para GET /algorithms. */
   findAll(): AlgorithmInfo[] {
     return [...this.definitions.values()].map((definition) => definition.info);
   }
 
-  /** Ficha de un algoritmo; 404 si el id no existe. */
   findOne(id: string): AlgorithmInfo {
     return this.getDefinition(id).info;
   }
 
-  /** Ejecuta un algoritmo; 404 si el id no existe, 400 si la entrada es inválida. */
   run(id: string, input: unknown): AlgorithmResult {
     const definition = this.getDefinition(id);
 
@@ -35,26 +28,29 @@ export class AlgorithmsService {
       return runAlgorithm(definition, input);
     } catch (error) {
       if (error instanceof TypeError || error instanceof RangeError) {
-        throw new BadRequestException(error.message);
+        throw new Error(error.message, {
+          cause: 'bad-array',
+        });
       }
       throw error;
     }
   }
 
-  /** Ejecuta varios algoritmos, cada uno sobre su propia copia del mismo arreglo. */
   compare(ids: unknown, input: unknown): AlgorithmResult[] {
     if (
       !Array.isArray(ids) ||
       ids.length < 2 ||
       ids.some((id) => typeof id !== 'string')
     ) {
-      throw new BadRequestException(
-        'At least two algorithm ids are required to compare.',
-      );
+      throw new Error('At least two algorithm ids are required to compare.', {
+        cause: 'bad-ids',
+      });
     }
 
     if (new Set(ids).size !== ids.length) {
-      throw new BadRequestException('Algorithm ids cannot be repeated.');
+      throw new Error('Algorithm ids cannot be repeated.', {
+        cause: 'algorithms-repeat',
+      });
     }
 
     const algorithmIds = ids as string[];
@@ -66,7 +62,9 @@ export class AlgorithmsService {
   private getDefinition(id: string): AlgorithmDefinition {
     const definition = this.definitions.get(id);
     if (!definition) {
-      throw new NotFoundException(`Algorithm "${id}" does not exist.`);
+      throw new Error(`Algorithm "${id}" does not exist.`, {
+        cause: 'unknown-id',
+      });
     }
     return definition;
   }

@@ -1,6 +1,15 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AlgorithmsService } from './algorithms.service';
+
+// El servicio lanza Error con una `cause`; el controlador la traduce a HTTP.
+function causeOf(fn: () => unknown): unknown {
+  try {
+    fn();
+  } catch (error) {
+    return (error as Error).cause;
+  }
+  throw new Error('Se esperaba que la función lanzara un error.');
+}
 
 describe('AlgorithmsService', () => {
   let service: AlgorithmsService;
@@ -32,8 +41,8 @@ describe('AlgorithmsService', () => {
       expect(service.findOne('insertion-sort').name).toBe('Insertion Sort');
     });
 
-    it('lanza 404 si el id no existe', () => {
-      expect(() => service.findOne('no-existe')).toThrow(NotFoundException);
+    it("lanza 'unknown-id' si el id no existe", () => {
+      expect(causeOf(() => service.findOne('no-existe'))).toBe('unknown-id');
     });
   });
 
@@ -44,17 +53,17 @@ describe('AlgorithmsService', () => {
       expect(result.metrics).toMatchObject({ comparisons: 3, swaps: 2 });
     });
 
-    it('lanza 404 si el id no existe', () => {
-      expect(() => service.run('no-existe', [1])).toThrow(NotFoundException);
+    it("lanza 'unknown-id' si el id no existe", () => {
+      expect(causeOf(() => service.run('no-existe', [1]))).toBe('unknown-id');
     });
 
-    it('lanza 400 si la entrada es inválida', () => {
-      expect(() => service.run('insertion-sort', 'abc')).toThrow(
-        BadRequestException,
+    it("lanza 'bad-array' si la entrada es inválida", () => {
+      expect(causeOf(() => service.run('insertion-sort', 'abc'))).toBe(
+        'bad-array',
       );
-      expect(() => service.run('insertion-sort', Array(51).fill(1))).toThrow(
-        BadRequestException,
-      );
+      expect(
+        causeOf(() => service.run('insertion-sort', Array(51).fill(1))),
+      ).toBe('bad-array');
     });
   });
 
@@ -73,22 +82,27 @@ describe('AlgorithmsService', () => {
       }
     });
 
-    it('lanza 400 con menos de dos algoritmos o ids repetidos', () => {
-      expect(() => service.compare(['insertion-sort'], [1])).toThrow(
-        BadRequestException,
+    it("lanza 'bad-ids' con menos de dos algoritmos", () => {
+      expect(causeOf(() => service.compare(['insertion-sort'], [1]))).toBe(
+        'bad-ids',
       );
-      expect(() => service.compare('insertion-sort', [1])).toThrow(
-        BadRequestException,
+      expect(causeOf(() => service.compare('insertion-sort', [1]))).toBe(
+        'bad-ids',
       );
-      expect(() =>
-        service.compare(['insertion-sort', 'insertion-sort'], [1]),
-      ).toThrow(BadRequestException);
     });
 
-    it('lanza 404 si algún id no existe', () => {
-      expect(() =>
-        service.compare(['insertion-sort', 'no-existe'], [1]),
-      ).toThrow(NotFoundException);
+    it("lanza 'algorithms-repeat' con ids repetidos", () => {
+      expect(
+        causeOf(() =>
+          service.compare(['insertion-sort', 'insertion-sort'], [1]),
+        ),
+      ).toBe('algorithms-repeat');
+    });
+
+    it("lanza 'unknown-id' si algún id no existe", () => {
+      expect(
+        causeOf(() => service.compare(['insertion-sort', 'no-existe'], [1])),
+      ).toBe('unknown-id');
     });
   });
 });
