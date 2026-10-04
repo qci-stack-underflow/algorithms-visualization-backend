@@ -66,6 +66,8 @@ export class AlgorithmsController {
     )
       throw new BadRequestException('Array input is bad-formatted');
 
+    if (body['input'].length > 50)
+      throw new BadRequestException(`Array input is too big (up to 50, sent ${body['input'].length})`)
     try {
       return this.algorithmsService.run(id, body['input']);
     } catch (e: any) {
@@ -98,6 +100,9 @@ export class AlgorithmsController {
       body['input'].some((n) => typeof n !== 'number' || !Number.isFinite(n))
     )
       throw new BadRequestException('input is bad-formatted');
+
+    if (body['input'].length > 50)
+      throw new BadRequestException(`Array input is too big (up to 50, sent ${body['input'].length})`)
 
     try {
       return this.algorithmsService.compare(body['algorithms'], body['input']);
