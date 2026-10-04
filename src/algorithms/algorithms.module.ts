@@ -5,6 +5,6 @@ import { AlgorithmsController } from './algorithms.controller';
 @Module({
   controllers: [AlgorithmsController],
   providers: [AlgorithmsService],
-  exports: [AlgorithmsService]
+  exports: [AlgorithmsService],
 })
 export class AlgorithmsModule {}

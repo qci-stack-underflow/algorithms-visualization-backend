@@ -5,7 +5,7 @@ export class HealthService {
   goodState() {
     return {
       code: 200,
-      msg: 'Server running normally'
+      msg: 'Server running normally',
     };
   }
 }

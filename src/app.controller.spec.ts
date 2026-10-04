@@ -16,7 +16,9 @@ describe('AppController', () => {
 
   describe('root', () => {
     it('should return "Algorithm runner ready to work. Check out docs."', () => {
-      expect(appController.getHello()).toBe('Algorithm runner ready to work. Check out docs.');
+      expect(appController.getHello()).toBe(
+        'Algorithm runner ready to work. Check out docs.',
+      );
     });
   });
 });
