@@ -27,7 +27,11 @@ export class AlgorithmsController {
 
   @Get('/')
   findAll(): AlgorithmInfo[] {
-    return this.algorithmsService.findAll();
+    try {
+      return this.algorithmsService.findAll();
+    } catch {
+      throw new InternalServerErrorException('Something went wrong.');
+    }
   }
 
   @Get('/:id')
@@ -55,6 +59,13 @@ export class AlgorithmsController {
     if (body['input'] === undefined)
       throw new BadRequestException('Array input is missing');
 
+    if (
+      !Array.isArray(body['input']) ||
+      body['input'].length <= 0 ||
+      body['input'].some((n) => typeof n !== 'number' || !Number.isFinite(n))
+    )
+      throw new BadRequestException('Array input is bad-formatted');
+
     try {
       return this.algorithmsService.run(id, body['input']);
     } catch (e: any) {
@@ -77,7 +88,9 @@ export class AlgorithmsController {
       );
 
     if (body['algorithms'].some((id) => !this.isAlgorithm(id)))
-      throw new NotFoundException("There are one or more invalid algorithm ids")
+      throw new NotFoundException(
+        'There are one or more invalid algorithm ids',
+      );
 
     if (
       !Array.isArray(body['input']) ||
