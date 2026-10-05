@@ -14,7 +14,7 @@ import {
   AlgorithmId,
   type AlgorithmResult,
   type AlgorithmInfo,
-} from '@type/algorithm.types';
+} from '../types/algorithm.types';
 
 @Controller('algorithms')
 export class AlgorithmsController {
