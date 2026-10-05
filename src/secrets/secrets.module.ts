@@ -10,6 +10,6 @@ import { SecretsService } from './secrets.service';
     }),
   ],
   providers: [SecretsService],
-  exports: [SecretsService]
+  exports: [SecretsService],
 })
 export class SecretsModule {}
