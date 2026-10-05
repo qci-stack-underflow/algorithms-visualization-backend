@@ -1,3 +1,6 @@
+# ignore files with no name, only extension
+.*
+
 # Logs
 logs
 *.log
