@@ -3,10 +3,10 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HealthModule } from './health/health.module';
 import { AlgorithmsModule } from './algorithms/algorithms.module';
-import { SecretsModule } from './secrets/secrets.module';
+// import { SecretsModule } from './secrets/secrets.module';
 
 @Module({
-  imports: [HealthModule, AlgorithmsModule, SecretsModule],
+  imports: [HealthModule, AlgorithmsModule],
   controllers: [AppController],
   providers: [AppService],
 })
