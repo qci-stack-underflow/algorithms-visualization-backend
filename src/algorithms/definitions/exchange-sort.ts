@@ -1,4 +1,4 @@
-import { AlgorithmDefinition } from '@type/algorithm.types';
+import { AlgorithmDefinition } from '../../types/algorithm.types';
 
 export const exchangeSort: AlgorithmDefinition = {
   info: {

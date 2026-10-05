@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { runAlgorithm } from '@algorithm/util/algorithm.tracer';
+import { runAlgorithm } from './utils/algorithm.tracer';
 import {
   AlgorithmDefinition,
   AlgorithmInfo,
   AlgorithmResult,
-} from '@type/algorithm.types';
-import { ALGORITHM_DEFINITIONS } from '@algorithm/util/algorithms.registry';
+} from '../types/algorithm.types';
+import { ALGORITHM_DEFINITIONS } from './utils/algorithms.registry';
 
 @Injectable()
 export class AlgorithmsService {
