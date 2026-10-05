@@ -77,9 +77,10 @@ describe('AlgorithmsController', () => {
       expect(
         controller.executeAlgorithm({ input: [3, 1, 2] }, 'bubble-sort'),
       ).toEqual(result);
-      expect(mockAlgorithmsService.run).toHaveBeenCalledWith('bubble-sort', [
-        3, 1, 2,
-      ]);
+      expect(mockAlgorithmsService.run).toHaveBeenCalledWith(
+        'bubble-sort',
+        [3, 1, 2],
+      );
     });
 
     it('should reject an unknown algorithm without calling the service', () => {
@@ -95,7 +96,10 @@ describe('AlgorithmsController', () => {
       [{ input: [] }, 'Array input is bad-formatted'],
       [{ input: [1, '2'] }, 'Array input is bad-formatted'],
       [{ input: [Infinity] }, 'Array input is bad-formatted'],
-      [{ input: Array(51).fill(1) }, 'Array input is too big (up to 50, sent 51)'],
+      [
+        { input: Array(51).fill(1) },
+        'Array input is too big (up to 50, sent 51)',
+      ],
     ])('should reject invalid body %p', (body, message) => {
       expect(() => controller.executeAlgorithm(body, 'bubble-sort')).toThrow(
         message,
@@ -125,7 +129,10 @@ describe('AlgorithmsController', () => {
   });
 
   describe('compareAlgorithms', () => {
-    const validBody = { algorithms: ['bubble-sort', 'insertion-sort'], input: [2, 1] };
+    const validBody = {
+      algorithms: ['bubble-sort', 'insertion-sort'],
+      input: [2, 1],
+    };
 
     it('should compare valid algorithms with the provided input', () => {
       const results = [{ sorted: [1, 2] }, { sorted: [1, 2] }];
@@ -141,11 +148,29 @@ describe('AlgorithmsController', () => {
     it.each([
       [undefined, 'Missing body.'],
       [{ input: [1] }, 'Algorithms or input are missing.'],
-      [{ algorithms: ['bubble-sort'], input: [1] }, 'Algorithms are bad-formatted or there are less than 2'],
-      [{ algorithms: ['bubble-sort', 'unknown'], input: [1] }, 'There are one or more invalid algorithm ids'],
-      [{ algorithms: ['bubble-sort', 'insertion-sort'], input: [] }, 'input is bad-formatted'],
-      [{ algorithms: ['bubble-sort', 'insertion-sort'], input: [1, '2'] }, 'input is bad-formatted'],
-      [{ algorithms: ['bubble-sort', 'insertion-sort'], input: Array(51).fill(1) }, 'Array input is too big (up to 50, sent 51)'],
+      [
+        { algorithms: ['bubble-sort'], input: [1] },
+        'Algorithms are bad-formatted or there are less than 2',
+      ],
+      [
+        { algorithms: ['bubble-sort', 'unknown'], input: [1] },
+        'There are one or more invalid algorithm ids',
+      ],
+      [
+        { algorithms: ['bubble-sort', 'insertion-sort'], input: [] },
+        'input is bad-formatted',
+      ],
+      [
+        { algorithms: ['bubble-sort', 'insertion-sort'], input: [1, '2'] },
+        'input is bad-formatted',
+      ],
+      [
+        {
+          algorithms: ['bubble-sort', 'insertion-sort'],
+          input: Array(51).fill(1),
+        },
+        'Array input is too big (up to 50, sent 51)',
+      ],
     ])('should reject invalid comparison body %p', (body, message) => {
       expect(() => controller.compareAlgorithms(body)).toThrow(message);
       expect(mockAlgorithmsService.compare).not.toHaveBeenCalled();
