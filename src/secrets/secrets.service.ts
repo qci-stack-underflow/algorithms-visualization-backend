@@ -6,6 +6,8 @@ export class SecretsService {
   constructor(private readonly configService: ConfigService) {}
 
   get PORT(): number {
-    return this.configService.get<number>('PORT', 3000)
+    const portStr = this.configService.get<string>('PORT', '3000')
+
+    return parseInt(portStr);
   }
 }
