@@ -7,7 +7,7 @@ import {
   AlgorithmStep,
   MAX_INPUT_LENGTH,
   SortTracer,
-} from '@type/algorithm.types';
+} from '../../types/algorithm.types';
 
 /**
  * Opera sobre una copia del arreglo y cuenta las operaciones.

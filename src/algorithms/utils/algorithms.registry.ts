@@ -1,12 +1,12 @@
-import { AlgorithmDefinition } from '@type/algorithm.types';
-import { bubbleSort } from '@algorithm/bubble-sort';
-import { exchangeSort } from '@algorithm/exchange-sort';
-import { gnomeSort } from '@algorithm/gnome-sort';
-import { insertionSort } from '@algorithm/insertion-sort';
-import { mergeSort } from '@algorithm/merge-sort';
-import { quickSort } from '@algorithm/quick-sort';
-import { selectionSort } from '@algorithm/selection-sort';
-import { stoogeSort } from '@algorithm/stooge-sort';
+import { AlgorithmDefinition } from '../../types/algorithm.types';
+import { bubbleSort } from '../definitions/bubble-sort';
+import { exchangeSort } from '../definitions/exchange-sort';
+import { gnomeSort } from '../definitions/gnome-sort';
+import { insertionSort } from '../definitions/insertion-sort';
+import { mergeSort } from '../definitions/merge-sort';
+import { quickSort } from '../definitions/quick-sort';
+import { selectionSort } from '../definitions/selection-sort';
+import { stoogeSort } from '../definitions/stooge-sort';
 
 /**
  * Algoritmos disponibles en la API. Para agregar uno nuevo basta con
