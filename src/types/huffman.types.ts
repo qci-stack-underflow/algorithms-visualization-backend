@@ -293,6 +293,20 @@ export interface HuffmanTracer {
 // ---------------------------------------------------------------------------
 
 /**
+ * Entrada individual del diccionario de símbolos y códigos en el encabezado .suf.
+ */
+export interface SufDictionaryEntry {
+  /** Carácter o símbolo Unicode. */
+  symbol: string;
+  /** Cantidad de apariciones del símbolo en el texto original. */
+  frequency: number;
+  /** Longitud en bits del código de Huffman. */
+  codeLength: number;
+  /** Cadena de bits del código de Huffman (p. ej. "010"). */
+  code: string;
+}
+
+/**
  * Estructura del encabezado del archivo binario .suf.
  *
  * Formato del archivo .suf:
@@ -301,10 +315,12 @@ export interface HuffmanTracer {
  * 3. Bits de relleno en el último byte (1 byte, uint8: 0..7).
  * 4. Cantidad de símbolos distintos k (2 bytes, unsigned 16-bit int, big-endian).
  * 5. Longitud del título del libro (2 bytes, unsigned 16-bit int, big-endian) + título UTF-8.
- * 6. Tabla de frecuencias: Para cada uno de los k símbolos:
+ * 6. Diccionario de símbolos y códigos: Para cada uno de los k símbolos:
  *    - Longitud en bytes del símbolo UTF-8 (1 byte uint8).
  *    - Símbolo codificado en UTF-8.
  *    - Frecuencia del símbolo (4 bytes, unsigned 32-bit int, big-endian).
+ *    - Longitud del código en bits (1 byte uint8).
+ *    - Cadena del código de Huffman en ASCII (codeLength bytes).
  * 7. Cuerpo de datos: Bits comprimidos empaquetados en bytes (MSB a LSB).
  */
 export interface SufHeader {
@@ -313,7 +329,8 @@ export interface SufHeader {
   paddingBits: number;
   symbolCount: number;
   title: string;
-  frequencies: Array<{ symbol: string; frequency: number }>;
+  dictionary: SufDictionaryEntry[];
+  frequencies?: Array<{ symbol: string; frequency: number }>;
 }
 
 // ---------------------------------------------------------------------------
