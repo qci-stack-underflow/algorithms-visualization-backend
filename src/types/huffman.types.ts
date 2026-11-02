@@ -42,10 +42,14 @@ export const HUFFMAN_PSEUDOCODE = [
 export type HuffmanPseudocodeLine = (typeof HUFFMAN_PSEUDOCODE)[number];
 
 // ---------------------------------------------------------------------------
-// Catálogo de libros (GET /huffman/books)
+// Origen de los datos (Unión Discriminada: Catálogo Gutenberg o Archivo de Usuario)
 // ---------------------------------------------------------------------------
 
-export interface BookInfo {
+/**
+ * Metadatos para libros provenientes de Project Gutenberg o del catálogo.
+ */
+export interface GutenbergSourceInfo {
+  type: 'gutenberg';
   /** Identificador numérico del libro en Project Gutenberg (p. ej. 2000 para Don Quijote). */
   id: number;
   /** Título oficial de la obra. */
@@ -61,6 +65,33 @@ export interface BookInfo {
   /** URL opcional de la portada del libro. */
   coverImage?: string;
 }
+
+/**
+ * Metadatos para archivos .txt subidos directamente por el usuario.
+ */
+export interface UserFileSourceInfo {
+  type: 'upload';
+  /** Nombre original del archivo subido (p. ej. "mi-texto.txt"). */
+  filename: string;
+  /** Título asignado o derivado para el documento. */
+  title: string;
+  /** Tamaño aproximado formateado (p. ej. "120 KB", "1.5 MB"). */
+  size: string;
+  /** Tamaño exacto del archivo en bytes. */
+  bytes: number;
+  /** Tipo MIME validado del archivo subido. */
+  mimeType: 'text/plain';
+}
+
+/**
+ * Origen discriminado del texto procesado por el algoritmo de Huffman.
+ */
+export type HuffmanSourceInfo = GutenbergSourceInfo | UserFileSourceInfo;
+
+/**
+ * Representación compatible para entradas de catálogo y resultados de búsqueda.
+ */
+export type BookInfo = GutenbergSourceInfo;
 
 // ---------------------------------------------------------------------------
 // Respuesta de compresión de archivo personalizado (POST /huffman/compress/file)
@@ -261,8 +292,15 @@ export interface HuffmanPreview {
 // ---------------------------------------------------------------------------
 
 export interface HuffmanResult {
-  /** Información y metadatos del libro procesado. */
-  book: BookInfo;
+  /**
+   * Información de origen del texto procesado (libro de Project Gutenberg o archivo .txt subido).
+   * Unión discriminada por el campo `source.type` ('gutenberg' | 'upload').
+   */
+  source: HuffmanSourceInfo;
+  /**
+   * Referencia opcional para compatibilidad hacia atrás si el origen es un libro de Gutenberg.
+   */
+  book?: GutenbergSourceInfo;
   /** Número total de caracteres procesados en el texto. */
   totalCharacters: number;
   /** Cantidad de símbolos distintos identificados (k). */

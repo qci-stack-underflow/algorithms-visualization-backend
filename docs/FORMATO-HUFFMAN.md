@@ -164,10 +164,20 @@ Descarga (o recupera de caché local) el libro correspondiente desde Project Gut
   - `413 Payload Too Large`: Si el archivo excede los 6 MB.
   - `504 Gateway Timeout`: Si la descarga supera los 10 segundos.
 
-#### Estructura de Respuesta (`HuffmanResult`):
+#### Estructura de Respuesta (`HuffmanResult` para libro Gutenberg):
 ```json
 {
+  "source": {
+    "type": "gutenberg",
+    "id": 2000,
+    "title": "Don Quijote",
+    "author": "Miguel de Cervantes Saavedra",
+    "language": "Español",
+    "size": "2.2 MB",
+    "bytes": 2168320
+  },
   "book": {
+    "type": "gutenberg",
     "id": 2000,
     "title": "Don Quijote",
     "author": "Miguel de Cervantes Saavedra",
@@ -216,6 +226,9 @@ Descarga (o recupera de caché local) el libro correspondiente desde Project Gut
   }
 }
 ```
+
+> [!NOTE]
+> `HuffmanResult` modela el origen mediante la **unión discriminada** `source: GutenbergSourceInfo | UserFileSourceInfo`. Cuando el archivo proviene de una subida de usuario (`POST /huffman/compress/file`), `source.type` es `'upload'`, conteniendo `{ filename, title, size, bytes, mimeType }` sin forzar atributos inexistentes de libros. Se conserva además el campo `book` como alias hacia `source` para retrocompatibilidad con clientes que esperen libros de Gutenberg.
 
 ---
 
