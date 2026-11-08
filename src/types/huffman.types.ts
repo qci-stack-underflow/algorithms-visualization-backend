@@ -94,32 +94,6 @@ export type HuffmanSourceInfo = GutenbergSourceInfo | UserFileSourceInfo;
 export type BookInfo = GutenbergSourceInfo;
 
 // ---------------------------------------------------------------------------
-// Respuesta de compresión de archivo personalizado (POST /huffman/compress/file)
-// ---------------------------------------------------------------------------
-
-/**
- * Información del enlace temporal de descarga del binario .suf generado.
- */
-export interface SufFileDownload {
-  /** URL relativa o absoluta para la descarga del archivo binario .suf. */
-  url: string;
-  /** Fecha y hora ISO 8601 en la que expira el enlace de descarga. */
-  expiresAt: string;
-  /** Nombre sugerido para el archivo descargado. */
-  filename: string;
-}
-
-/**
- * Respuesta para la compresión de un archivo .txt enviado por el cliente.
- */
-export interface HuffmanFileUploadResponse {
-  /** Resultado completo del análisis del algoritmo de Huffman. */
-  result: HuffmanResult;
-  /** Metadatos y enlace para la descarga del archivo .suf generado. */
-  download: SufFileDownload;
-}
-
-// ---------------------------------------------------------------------------
 // Estructura del árbol de Huffman
 // ---------------------------------------------------------------------------
 
