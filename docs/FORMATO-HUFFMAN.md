@@ -276,22 +276,6 @@ Permite a los usuarios subir un archivo de texto plano propio (`.txt`) mediante 
 
 ---
 
-### 2.6. `GET /huffman/files/:token/download`
-Descarga el binario `.suf` asociado al enlace temporal generado en una compresión previa.
-
-- **Método**: `GET`
-- **Ruta**: `/huffman/files/:token/download`
-- **Mecanismo de Almacenamiento Efímero**:
-  - Para evitar persistir archivos indefinidamente en el servidor, el binario o su semilla se conserva en caché en memoria / temporal con un tiempo de expiración corto (p. ej. 15 a 30 minutos).
-- **Cabeceras de Respuesta**:
-  - `Content-Type: application/octet-stream`
-  - `Content-Disposition: attachment; filename="<nombre>.suf"`
-- **Respuestas**:
-  - `200 OK`: Flujo binario `.suf`.
-  - `404 Not Found` / `410 Gone`: Si el token no existe o ha expirado.
-
----
-
 ## 3. Formato Binario Propietario `.suf` (SUF1)
 
 El archivo `.suf` consta de dos secciones: **Encabezado (Header con Diccionario)** y **Cuerpo (Compressed Bitstream)**.
