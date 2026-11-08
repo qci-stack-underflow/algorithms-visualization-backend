@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, InternalServerErrorException } from '@nestjs/common';
 import { HuffmanService } from './huffman.service';
 
 @Controller('huffman')
@@ -7,6 +7,10 @@ export class HuffmanController {
 
   @Get('')
   getHuffman() {
-    return "Hello from /huffman!"
+    try {
+      return this.huffmanService.getHuffman();
+    } catch {
+      throw new InternalServerErrorException('Something went wrong.');
+    }
   }
 }
