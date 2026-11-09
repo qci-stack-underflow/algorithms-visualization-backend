@@ -1,12 +1,16 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+  PayloadTooLargeException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { GutenbergClient } from '../books/gutenberg.client';
 import { LocalBackupService } from '../books/local-backup.service';
-import { SUF_MAGIC } from '../types/huffman.types';
+import { SUF_MAGIC, VERCEL_MAX_PAYLOAD_BYTES } from '../types/huffman.types';
 import { HuffmanEngine } from './huffman.engine';
 import { HuffmanService } from './huffman.service';
 
-describe('HuffmanService (B5)', () => {
+describe('HuffmanService (B5 & B7)', () => {
   let service: HuffmanService;
   let gutenbergClient: { fetchBookText: jest.Mock };
 
@@ -26,6 +30,10 @@ describe('HuffmanService (B5)', () => {
     }).compile();
 
     service = module.get<HuffmanService>(HuffmanService);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('procesa metadatos de Huffman y construye árbol, tabla, pasos y métricas', async () => {
@@ -48,13 +56,26 @@ describe('HuffmanService (B5)', () => {
     expect(result.totalCharacters).toBeGreaterThan(50);
   });
 
-  it('genera un archivo binario .suf válido con encabezado SUF1', async () => {
+  it('genera el archivo binario .suf como Buffer (no string) menor a 4.5 MB (B7)', async () => {
     const { buffer } = await service.generateSufFile(2000);
     expect(Buffer.isBuffer(buffer)).toBe(true);
+    expect(typeof (buffer as unknown)).not.toBe('string');
+    expect(buffer.byteLength).toBeLessThan(VERCEL_MAX_PAYLOAD_BYTES);
+
     const parsed = HuffmanEngine.parseSufBuffer(buffer);
     expect(parsed.magic).toBe(SUF_MAGIC);
     expect(parsed.title).toBe('Don Quijote');
     expect(parsed.dictionary.length).toBe(parsed.symbolCount);
+  });
+
+  it('lanza 413 PayloadTooLargeException si el binario .suf supera 4.5 MB (B7)', async () => {
+    jest
+      .spyOn(HuffmanEngine, 'generateSufBuffer')
+      .mockReturnValueOnce(Buffer.alloc(VERCEL_MAX_PAYLOAD_BYTES + 1));
+
+    await expect(service.generateSufFile(2000)).rejects.toThrow(
+      PayloadTooLargeException,
+    );
   });
 
   it('lanza NotFoundException si el ID no existe en el catálogo', async () => {

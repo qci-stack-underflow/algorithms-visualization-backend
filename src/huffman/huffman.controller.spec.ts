@@ -3,14 +3,19 @@ import {
   NotFoundException,
   StreamableFile,
 } from '@nestjs/common';
+import { HEADERS_METADATA } from '@nestjs/common/constants';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BOOKS_CATALOG } from '../books/books.catalog';
 import { GutenbergClient } from '../books/gutenberg.client';
 import { LocalBackupService } from '../books/local-backup.service';
-import { HuffmanController } from './huffman.controller';
+import { VERCEL_MAX_PAYLOAD_BYTES } from '../types/huffman.types';
+import {
+  HUFFMAN_CACHE_CONTROL,
+  HuffmanController,
+} from './huffman.controller';
 import { HuffmanService } from './huffman.service';
 
-describe('HuffmanController (B5 & B6)', () => {
+describe('HuffmanController (B5, B6 & B7)', () => {
   let controller: HuffmanController;
   let gutenbergClient: GutenbergClient;
 
@@ -44,7 +49,7 @@ describe('HuffmanController (B5 & B6)', () => {
     expect(books.length).toBeGreaterThanOrEqual(4);
   });
 
-  it('GET /huffman/books/:id devuelve el JSON de compresión Huffman', async () => {
+  it('GET /huffman/books/:id devuelve el JSON de compresión Huffman compacto (< 4.5 MB)', async () => {
     const result = await controller.compressByIdMetadata(2000);
     expect(gutenbergClient.fetchBookText).toHaveBeenCalledWith(2000);
     expect(result.source.id).toBe(2000);
@@ -52,14 +57,45 @@ describe('HuffmanController (B5 & B6)', () => {
     expect(result.nodes.length).toBeGreaterThan(0);
     expect(result.steps.length).toBeGreaterThan(0);
     expect(result.metrics.originalBytes).toBeGreaterThan(0);
+
+    const serializedSize = Buffer.byteLength(JSON.stringify(result), 'utf-8');
+    expect(serializedSize).toBeLessThan(VERCEL_MAX_PAYLOAD_BYTES);
+    expect((result as Record<string, unknown>).encodedDataBits).toBeUndefined();
   });
 
-  it('GET /huffman/books/:id/file devuelve un StreamableFile con el binario .suf', async () => {
+  it('GET /huffman/books/:id/file devuelve el archivo .suf como bytes (Buffer), no como string (B7)', async () => {
     const streamable = await controller.compressByIdDownload(2000);
     expect(streamable).toBeInstanceOf(StreamableFile);
     const headers = streamable.getHeaders();
     expect(headers.type).toBe('application/octet-stream');
     expect(headers.disposition).toContain('book_2000.suf');
+
+    const chunks: Buffer[] = [];
+    for await (const chunk of streamable.getStream()) {
+      expect(Buffer.isBuffer(chunk)).toBe(true);
+      chunks.push(chunk as Buffer);
+    }
+    const fullBuffer = Buffer.concat(chunks);
+    expect(fullBuffer.subarray(0, 4).toString('ascii')).toBe('SUF1');
+    expect(fullBuffer.byteLength).toBeLessThan(VERCEL_MAX_PAYLOAD_BYTES);
+  });
+
+  it('añade cabeceras Cache-Control en los 3 endpoints para aprovechar la caché de Vercel (B7)', () => {
+    const methods = [
+      HuffmanController.prototype.getDefaultBooks,
+      HuffmanController.prototype.compressByIdMetadata,
+      HuffmanController.prototype.compressByIdDownload,
+    ];
+
+    for (const method of methods) {
+      const headers: Array<{ name: string; value: string }> =
+        Reflect.getMetadata(HEADERS_METADATA, method) ?? [];
+      expect(headers).toEqual(
+        expect.arrayContaining([
+          { name: 'Cache-Control', value: HUFFMAN_CACHE_CONTROL },
+        ]),
+      );
+    }
   });
 
   it('lanza 400 BadRequestException cuando el ID es <= 0', async () => {
