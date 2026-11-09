@@ -1,9 +1,15 @@
 import {
   Controller,
   Get,
+  Header,
   InternalServerErrorException,
+  Param,
+  ParseIntPipe,
   Post,
+  StreamableFile,
 } from '@nestjs/common';
+import { CatalogBook } from '../books/books.catalog';
+import { HuffmanResult } from '../types/huffman.types';
 import { HuffmanService } from './huffman.service';
 
 @Controller('huffman')
@@ -19,28 +25,37 @@ export class HuffmanController {
     }
   }
 
-  // TODO: Return actual list of default books
-  @Get('/books')
-  getDefaultBooks() {
-    return [];
+  @Get('books')
+  getDefaultBooks(): readonly CatalogBook[] {
+    return this.huffmanService.getCatalog();
   }
 
-  @Get('/books/search')
+  @Get('books/search')
   searchBook() {
     return 'List of found books by query param';
   }
 
   @Get('books/:id')
-  compressByIdMetadata() {
-    return 'compressed book with metrics from Project Gutenberg from a given ID';
+  async compressByIdMetadata(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<HuffmanResult> {
+    return this.huffmanService.processHuffmanMetadata(id);
   }
 
   @Get('books/:id/file')
-  compressByIdDonwload() {
-    return 'binary .suf file containing compressed book';
+  @Header('Content-Type', 'application/octet-stream')
+  async compressByIdDownload(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<StreamableFile> {
+    const { buffer } = await this.huffmanService.generateSufFile(id);
+    return new StreamableFile(buffer, {
+      type: 'application/octet-stream',
+      disposition: `attachment; filename="book_${id}.suf"`,
+      length: buffer.byteLength,
+    });
   }
 
-  @Post('/compress/file')
+  @Post('compress/file')
   compressFromClient() {
     return 'compressed .txt file from client with metadata';
   }
