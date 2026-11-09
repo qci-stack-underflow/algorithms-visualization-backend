@@ -173,7 +173,7 @@ Todo el código generado con apoyo de IA fue revisado y probado por el equipo, q
 
 ## Documentación técnica del backend
 
-### Endpoints
+### Endpoints de Ordenamiento
 
 | Método | Ruta | Cuerpo | Respuesta |
 |---|---|---|---|
@@ -184,6 +184,43 @@ Todo el código generado con apoyo de IA fue revisado y probado por el equipo, q
 | GET | `/checkhealth` | — | Estado del servidor |
 
 Errores: 400 si la entrada no es válida (no son números, más de 50 elementos, menos de dos algoritmos o algoritmos repetidos) y 404 si el algoritmo no existe.
+
+### Endpoints de Compresión de Huffman (Project Gutenberg)
+
+| Método | Ruta | Descripción | Cabeceras clave |
+|---|---|---|---|
+| GET | `/huffman` | Descripción general y pseudocódigo del algoritmo de Huffman | — |
+| GET | `/huffman/books` | Catálogo de libros predefinidos de Project Gutenberg (`id`, `title`, `author`, `language`, `size`, `sizeBytes`) | `Cache-Control: public, max-age=86400, s-maxage=604800` |
+| GET | `/huffman/books/:id` | Descarga, limpia y comprime el libro con Huffman; devuelve el árbol plano (`nodes`), pasos animables (`steps`), tabla de frecuencias (`table`), códigos (`codes`), métricas (`metrics`) y vista previa (`preview`) | `Cache-Control: public, max-age=86400, s-maxage=604800` |
+| GET | `/huffman/books/:id/file` | Genera y descarga el archivo binario comprimido `.suf` (`SUF1`) como `Buffer` (`StreamableFile`) | `Content-Type: application/octet-stream`, `Content-Disposition: attachment; filename="book_:id.suf"`, `Cache-Control` |
+
+#### Códigos de Error en `/huffman`
+- **`400 Bad Request`**: El parámetro `:id` no es un número entero positivo válido.
+- **`404 Not Found`**: El libro solicitado no existe en el catálogo ni en Project Gutenberg.
+- **`413 Payload Too Large`**: El libro o la respuesta supera el límite de **4.5 MB** de Vercel Serverless Functions.
+- **`504 Gateway Timeout`**: Project Gutenberg no respondió dentro del tiempo límite de **10 segundos**.
+
+#### Comandos locales para probar Huffman
+```bash
+# Iniciar el servidor en desarrollo
+pnpm start:dev
+
+# Consultar catálogo de libros
+curl -i http://localhost:3000/huffman/books
+
+# Obtener JSON de compresión de Don Quijote (ID 2000)
+curl -s http://localhost:3000/huffman/books/2000 | head -c 500
+
+# Descargar el archivo binario .suf
+curl -OJ http://localhost:3000/huffman/books/2000/file
+
+# Ejecutar pruebas unitarias y end-to-end
+pnpm test
+pnpm test:e2e
+pnpm build
+```
+
+Especificación completa del contrato y formato binario `.suf` en [`docs/FORMATO-HUFFMAN.md`](docs/FORMATO-HUFFMAN.md).
 
 ### Formato de los algoritmos
 
