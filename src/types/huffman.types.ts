@@ -380,8 +380,14 @@ export interface SufHeader {
 /** Identificador mágico obligatorio al inicio de todo archivo .suf. */
 export const SUF_MAGIC = 'SUF1' as const;
 
-/** Tamaño máximo de libro permitido para descarga y procesamiento (6 MB). */
+/** Tamaño máximo de libro de Project Gutenberg para descarga y procesamiento (6 MB). */
 export const MAX_BOOK_SIZE_BYTES = 6 * 1024 * 1024; // 6 MB
+
+/**
+ * Tamaño máximo permitido para archivos .txt subidos por el cliente (4 MB).
+ * Considera el sobrecosto de encabezados multipart/form-data y el límite de 4.5 MB de Vercel.
+ */
+export const MAX_UPLOAD_FILE_SIZE_BYTES = 4 * 1024 * 1024; // 4 MB
 
 /** Límite estricto de respuesta de función serverless en Vercel (4.5 MB). */
 export const VERCEL_MAX_PAYLOAD_BYTES = 4.5 * 1024 * 1024; // 4.5 MB
