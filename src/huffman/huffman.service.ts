@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { HUFFMAN_PSEUDOCODE } from '@type/huffman.types';
+import { HUFFMAN_PSEUDOCODE } from '../types/huffman.types';
 
 @Injectable()
 export class HuffmanService {
