@@ -7,7 +7,11 @@ async function bootstrap() {
   const secrets = app.get(SecretsService);
   const port = secrets.PORT;
 
-  app.enableCors();
+  app.enableCors({
+    origin: '*',
+    methods: ['GET', 'POST', 'OPTIONS'],
+    exposedHeaders: ['Content-Disposition', 'Cache-Control', 'Content-Length'],
+  });
 
   await app.listen(port, () => console.log(`listening app at port ${port}`));
 }

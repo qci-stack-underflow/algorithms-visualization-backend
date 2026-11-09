@@ -1,4 +1,4 @@
-import { BookInfo, CATALOG_BOOK_IDS } from '@type/huffman.types';
+import { BookInfo, CATALOG_BOOK_IDS } from '../types/huffman.types';
 
 export interface CatalogBook extends BookInfo {
   readonly id: number;
