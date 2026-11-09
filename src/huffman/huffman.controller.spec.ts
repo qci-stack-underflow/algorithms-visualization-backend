@@ -1,4 +1,8 @@
-import { StreamableFile } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+  StreamableFile,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BOOKS_CATALOG } from '../books/books.catalog';
 import { GutenbergClient } from '../books/gutenberg.client';
@@ -6,7 +10,7 @@ import { LocalBackupService } from '../books/local-backup.service';
 import { HuffmanController } from './huffman.controller';
 import { HuffmanService } from './huffman.service';
 
-describe('HuffmanController (B5)', () => {
+describe('HuffmanController (B5 & B6)', () => {
   let controller: HuffmanController;
   let gutenbergClient: GutenbergClient;
 
@@ -56,5 +60,20 @@ describe('HuffmanController (B5)', () => {
     const headers = streamable.getHeaders();
     expect(headers.type).toBe('application/octet-stream');
     expect(headers.disposition).toContain('book_2000.suf');
+  });
+
+  it('lanza 400 BadRequestException cuando el ID es <= 0', async () => {
+    await expect(controller.compressByIdMetadata(0)).rejects.toThrow(
+      BadRequestException,
+    );
+    await expect(controller.compressByIdDownload(-10)).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('lanza 404 NotFoundException cuando el ID no existe', async () => {
+    await expect(controller.compressByIdMetadata(999999)).rejects.toThrow(
+      NotFoundException,
+    );
   });
 });
