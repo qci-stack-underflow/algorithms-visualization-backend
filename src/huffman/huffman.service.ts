@@ -12,7 +12,11 @@ import {
 import { GutenbergClient } from '../books/gutenberg.client';
 import { LocalBackupService } from '../books/local-backup.service';
 import { TextCleaner } from '../books/text-cleaner';
-import { HUFFMAN_PSEUDOCODE, HuffmanResult } from '../types/huffman.types';
+import {
+  HUFFMAN_PSEUDOCODE,
+  HuffmanResult,
+  VERCEL_MAX_PAYLOAD_BYTES,
+} from '../types/huffman.types';
 import { HuffmanEngine } from './huffman.engine';
 
 @Injectable()
@@ -77,6 +81,13 @@ export class HuffmanService {
   ): Promise<{ buffer: Buffer; book: CatalogBook }> {
     const { text, book } = await this.getBookText(bookId);
     const buffer = HuffmanEngine.generateSufBuffer(text, book.title);
+
+    if (buffer.byteLength > VERCEL_MAX_PAYLOAD_BYTES) {
+      throw new PayloadTooLargeException(
+        'El archivo .suf generado excede el límite de 4.5 MB de Vercel.',
+      );
+    }
+
     return { buffer, book };
   }
 }

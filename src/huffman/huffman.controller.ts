@@ -15,6 +15,9 @@ import { HuffmanExceptionFilter } from '../common/filters/huffman-exception.filt
 import { HuffmanResult } from '../types/huffman.types';
 import { HuffmanService } from './huffman.service';
 
+export const HUFFMAN_CACHE_CONTROL =
+  'public, max-age=86400, s-maxage=604800';
+
 @Controller('huffman')
 @UseFilters(HuffmanExceptionFilter)
 export class HuffmanController {
@@ -30,6 +33,7 @@ export class HuffmanController {
   }
 
   @Get('books')
+  @Header('Cache-Control', HUFFMAN_CACHE_CONTROL)
   getDefaultBooks(): readonly CatalogBook[] {
     return this.huffmanService.getCatalog();
   }
@@ -40,6 +44,7 @@ export class HuffmanController {
   }
 
   @Get('books/:id')
+  @Header('Cache-Control', HUFFMAN_CACHE_CONTROL)
   async compressByIdMetadata(
     @Param(
       'id',
@@ -61,6 +66,7 @@ export class HuffmanController {
   }
 
   @Get('books/:id/file')
+  @Header('Cache-Control', HUFFMAN_CACHE_CONTROL)
   @Header('Content-Type', 'application/octet-stream')
   async compressByIdDownload(
     @Param(
