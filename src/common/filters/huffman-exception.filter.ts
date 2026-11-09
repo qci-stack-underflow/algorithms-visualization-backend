@@ -65,6 +65,8 @@ export class HuffmanExceptionFilter implements ExceptionFilter {
         break;
     }
 
+    response
+      .setHeader?.('Content-Type', 'application/json; charset=utf-8');
     response.status(status).json({
       statusCode: status,
       error: errorType,
