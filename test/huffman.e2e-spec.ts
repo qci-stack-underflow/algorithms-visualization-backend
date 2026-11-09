@@ -76,6 +76,15 @@ describe('Huffman Endpoints (e2e - B8)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.enableCors({
+      origin: '*',
+      methods: ['GET', 'POST', 'OPTIONS'],
+      exposedHeaders: [
+        'Content-Disposition',
+        'Cache-Control',
+        'Content-Length',
+      ],
+    });
     await app.init();
   });
 
@@ -197,5 +206,26 @@ describe('Huffman Endpoints (e2e - B8)', () => {
       .get('/huffman/books/2000/file')
       .expect(504);
     expect(res504.body.statusCode).toBe(504);
+  });
+
+  it('verifica las cabeceras CORS y preflight OPTIONS para despliegue en Vercel (B9)', async () => {
+    const getRes = await request(app.getHttpServer())
+      .get('/huffman/books')
+      .set('Origin', 'https://stack-underflow-frontend-algviz.vercel.app')
+      .expect(200);
+
+    expect(getRes.headers['access-control-allow-origin']).toBe('*');
+    expect(getRes.headers['access-control-expose-headers']).toContain(
+      'Content-Disposition',
+    );
+
+    const optionsRes = await request(app.getHttpServer())
+      .options('/huffman/books/2000/file')
+      .set('Origin', 'https://stack-underflow-frontend-algviz.vercel.app')
+      .set('Access-Control-Request-Method', 'GET')
+      .expect(204);
+
+    expect(optionsRes.headers['access-control-allow-origin']).toBe('*');
+    expect(optionsRes.headers['access-control-allow-methods']).toContain('GET');
   });
 });
