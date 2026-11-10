@@ -9,16 +9,26 @@ import {
 import { countFrequencies } from './frequency-counter';
 import { buildHuffmanTree } from './tree-builder';
 import { writeSuf } from '../utils/suf-format';
+import { TextCleaner } from '../../books/text-cleaner';
 
 export interface CompressOptions {
   source?: HuffmanSourceInfo;
   title?: string;
   previewPhrase?: string;
+  clean?: boolean;
 }
 
 export interface HuffmanCompressionOutput {
   result: HuffmanResult;
   sufBuffer: Buffer;
+}
+
+/**
+ * Limpia y normaliza el texto eliminando BOM, normalizando saltos de línea y
+ * recortando encabezados/pies de Project Gutenberg si están presentes.
+ */
+export function cleanText(rawText: string): string {
+  return TextCleaner.clean(rawText);
 }
 
 /**
@@ -114,9 +124,13 @@ export function calculateMetrics(params: {
  * el archivo binario .suf, las métricas y la vista previa interactiva.
  */
 export function compressHuffman(
-  text: string,
+  rawText: string,
   options: CompressOptions = {},
 ): HuffmanCompressionOutput {
+  const shouldClean =
+    options.clean ?? (options.source?.type === 'gutenberg');
+  const text = shouldClean ? TextCleaner.clean(rawText) : rawText;
+
   if (text.length === 0) {
     throw new Error('El texto proporcionado para comprimir está vacío.');
   }

@@ -43,4 +43,10 @@ describe('HuffmanService', () => {
     expect(binary).toBeInstanceOf(Buffer);
     expect(binary.subarray(0, 4).toString('ascii')).toBe('SUF1');
   });
+
+  it('should clean Gutenberg text via cleanText', () => {
+    const raw =
+      '\uFEFF*** START OF THE PROJECT GUTENBERG EBOOK TEST ***\nContenido real\n*** END OF THE PROJECT GUTENBERG EBOOK TEST ***';
+    expect(service.cleanText(raw)).toBe('Contenido real');
+  });
 });

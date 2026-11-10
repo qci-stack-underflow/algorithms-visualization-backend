@@ -6,6 +6,7 @@ import {
   HuffmanCompressionOutput,
 } from './definitions/huffman-compressor';
 import { readSuf, ReadSufResult } from './utils/suf-format';
+import { TextCleaner } from '../books/text-cleaner';
 
 @Injectable()
 export class HuffmanService {
@@ -49,5 +50,13 @@ export class HuffmanService {
    */
   decompressBinary(sufBuffer: Buffer): ReadSufResult {
     return readSuf(sufBuffer);
+  }
+
+  /**
+   * Limpia y normaliza texto eliminando BOM, normalizando saltos de línea y
+   * recortando encabezados/pies de Project Gutenberg si están presentes.
+   */
+  cleanText(rawText: string): string {
+    return TextCleaner.clean(rawText);
   }
 }
