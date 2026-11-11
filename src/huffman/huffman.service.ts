@@ -25,7 +25,10 @@ export class HuffmanService {
    * @param options Opciones de metadatos (origen, título, frase de vista previa).
    * @returns Objeto con `result` (HuffmanResult) y `sufBuffer` (Buffer binario .suf).
    */
-  compress(rawText: string, options?: CompressOptions): HuffmanCompressionOutput {
+  compress(
+    rawText: string,
+    options?: CompressOptions,
+  ): HuffmanCompressionOutput {
     return compressHuffman(rawText, options);
   }
 

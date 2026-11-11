@@ -5,6 +5,6 @@ import { HuffmanService } from './huffman.service';
 @Module({
   controllers: [HuffmanController],
   providers: [HuffmanService],
-  exports: [HuffmanService]
+  exports: [HuffmanService],
 })
 export class HuffmanModule {}

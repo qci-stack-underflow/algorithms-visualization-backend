@@ -40,7 +40,12 @@ export class HuffmanRecordingTracer implements HuffmanTracer {
     });
   }
 
-  assignCode(nodeId: number, code: string, line: number, description?: string): void {
+  assignCode(
+    nodeId: number,
+    code: string,
+    line: number,
+    description?: string,
+  ): void {
     this.steps.push({
       type: 'assign-code',
       nodeId,

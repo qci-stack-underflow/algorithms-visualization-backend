@@ -24,7 +24,9 @@ export interface TreeBuildResult {
  */
 export function buildHuffmanTree(text: string): TreeBuildResult {
   if (text.length === 0) {
-    throw new Error('El texto proporcionado para construir el árbol de Huffman está vacío.');
+    throw new Error(
+      'El texto proporcionado para construir el árbol de Huffman está vacío.',
+    );
   }
 
   const { symbols, frequencies } = countFrequencies(text);

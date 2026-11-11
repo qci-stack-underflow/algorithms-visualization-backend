@@ -42,7 +42,9 @@ export function writeSuf(options: WriteSufOptions): Buffer {
   for (const char of text) {
     const code = codes[char];
     if (code === undefined) {
-      throw new Error(`Código Huffman no encontrado para el símbolo: ${JSON.stringify(char)}`);
+      throw new Error(
+        `Código Huffman no encontrado para el símbolo: ${JSON.stringify(char)}`,
+      );
     }
     bitString += code;
   }
@@ -71,7 +73,11 @@ export function writeSuf(options: WriteSufOptions): Buffer {
     const symbolBuffer = Buffer.from(entry.symbol, 'utf-8');
     const code = codes[entry.symbol] ?? '';
     const codeBuffer = Buffer.from(code, 'ascii');
-    dictionaryEntries.push({ symbolBuffer, frequency: entry.frequency, codeBuffer });
+    dictionaryEntries.push({
+      symbolBuffer,
+      frequency: entry.frequency,
+      codeBuffer,
+    });
 
     headerSize +=
       1 + // symbol length uint8
@@ -129,10 +135,11 @@ export function writeSuf(options: WriteSufOptions): Buffer {
   }
 
   // Cuerpo de datos comprimidos
-  Buffer.from(compressedData.buffer, compressedData.byteOffset, compressedData.byteLength).copy(
-    sufBuffer,
-    offset,
-  );
+  Buffer.from(
+    compressedData.buffer,
+    compressedData.byteOffset,
+    compressedData.byteLength,
+  ).copy(sufBuffer, offset);
 
   return sufBuffer;
 }
@@ -144,14 +151,18 @@ export function readSuf(buffer: Buffer): ReadSufResult {
   let offset = 0;
 
   if (buffer.length < 13) {
-    throw new Error('Archivo .suf corrupto o demasiado pequeño para contener la cabecera.');
+    throw new Error(
+      'Archivo .suf corrupto o demasiado pequeño para contener la cabecera.',
+    );
   }
 
   // 1. Magic bytes
   const magic = buffer.toString('ascii', offset, offset + 4);
   offset += 4;
   if (magic !== SUF_MAGIC) {
-    throw new Error(`Identificador mágico inválido: "${magic}". Se esperaba "${SUF_MAGIC}".`);
+    throw new Error(
+      `Identificador mágico inválido: "${magic}". Se esperaba "${SUF_MAGIC}".`,
+    );
   }
 
   // 2. Total caracteres

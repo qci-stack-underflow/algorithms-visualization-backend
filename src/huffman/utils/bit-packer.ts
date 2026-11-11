@@ -20,7 +20,8 @@ export interface BitPackResult {
 export function packBits(bitString: string): BitPackResult {
   const totalBits = bitString.length;
   const paddingBits = (8 - (totalBits % 8)) % 8;
-  const paddedBitString = paddingBits > 0 ? bitString + '0'.repeat(paddingBits) : bitString;
+  const paddedBitString =
+    paddingBits > 0 ? bitString + '0'.repeat(paddingBits) : bitString;
   const byteCount = Math.ceil(paddedBitString.length / 8);
   const data = new Uint8Array(byteCount);
 
@@ -73,7 +74,9 @@ export function encodeTextToBits(
   for (const char of text) {
     const code = codes[char];
     if (code === undefined) {
-      throw new Error(`Símbolo no encontrado en la tabla de códigos Huffman: ${JSON.stringify(char)}`);
+      throw new Error(
+        `Símbolo no encontrado en la tabla de códigos Huffman: ${JSON.stringify(char)}`,
+      );
     }
     bitString += code;
   }

@@ -15,7 +15,10 @@ describe('countFrequencies (Issue #35 / A2)', () => {
     expect(totalCharacters).toBe(11);
 
     // Criterio de aceptación: La suma de frecuencias es igual al total de caracteres
-    const sumFrequencies = Array.from(frequencies.values()).reduce((acc, v) => acc + v, 0);
+    const sumFrequencies = Array.from(frequencies.values()).reduce(
+      (acc, v) => acc + v,
+      0,
+    );
     expect(sumFrequencies).toBe(totalCharacters);
   });
 
@@ -31,7 +34,10 @@ describe('countFrequencies (Issue #35 / A2)', () => {
     expect(frequencies.get(' ')).toBe(2);
     expect(frequencies.get('a')).toBe(2);
 
-    const sumFrequencies = Array.from(frequencies.values()).reduce((acc, v) => acc + v, 0);
+    const sumFrequencies = Array.from(frequencies.values()).reduce(
+      (acc, v) => acc + v,
+      0,
+    );
     expect(sumFrequencies).toBe(totalCharacters);
     expect(totalCharacters).toBe(10);
   });

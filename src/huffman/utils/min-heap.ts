@@ -95,10 +95,16 @@ export class MinHeap {
       const left = 2 * current + 1;
       const right = 2 * current + 2;
 
-      if (left < length && this.compare(this.heap[left], this.heap[smallest]) < 0) {
+      if (
+        left < length &&
+        this.compare(this.heap[left], this.heap[smallest]) < 0
+      ) {
         smallest = left;
       }
-      if (right < length && this.compare(this.heap[right], this.heap[smallest]) < 0) {
+      if (
+        right < length &&
+        this.compare(this.heap[right], this.heap[smallest]) < 0
+      ) {
         smallest = right;
       }
 

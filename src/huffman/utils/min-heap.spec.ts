@@ -6,17 +6,38 @@ describe('MinHeap', () => {
     heap.push({
       id: 1,
       weight: 10,
-      node: { id: 1, weight: 10, symbol: 'a', left: null, right: null, isLeaf: true },
+      node: {
+        id: 1,
+        weight: 10,
+        symbol: 'a',
+        left: null,
+        right: null,
+        isLeaf: true,
+      },
     });
     heap.push({
       id: 2,
       weight: 3,
-      node: { id: 2, weight: 3, symbol: 'b', left: null, right: null, isLeaf: true },
+      node: {
+        id: 2,
+        weight: 3,
+        symbol: 'b',
+        left: null,
+        right: null,
+        isLeaf: true,
+      },
     });
     heap.push({
       id: 3,
       weight: 7,
-      node: { id: 3, weight: 7, symbol: 'c', left: null, right: null, isLeaf: true },
+      node: {
+        id: 3,
+        weight: 7,
+        symbol: 'c',
+        left: null,
+        right: null,
+        isLeaf: true,
+      },
     });
 
     expect(heap.length).toBe(3);
@@ -32,17 +53,38 @@ describe('MinHeap', () => {
     heap.push({
       id: 5,
       weight: 10,
-      node: { id: 5, weight: 10, symbol: 'x', left: null, right: null, isLeaf: true },
+      node: {
+        id: 5,
+        weight: 10,
+        symbol: 'x',
+        left: null,
+        right: null,
+        isLeaf: true,
+      },
     });
     heap.push({
       id: 2,
       weight: 10,
-      node: { id: 2, weight: 10, symbol: 'y', left: null, right: null, isLeaf: true },
+      node: {
+        id: 2,
+        weight: 10,
+        symbol: 'y',
+        left: null,
+        right: null,
+        isLeaf: true,
+      },
     });
     heap.push({
       id: 8,
       weight: 10,
-      node: { id: 8, weight: 10, symbol: 'z', left: null, right: null, isLeaf: true },
+      node: {
+        id: 8,
+        weight: 10,
+        symbol: 'z',
+        left: null,
+        right: null,
+        isLeaf: true,
+      },
     });
 
     const first = heap.pop();
@@ -61,12 +103,26 @@ describe('MinHeap', () => {
     heap.push({
       id: 1,
       weight: 5,
-      node: { id: 1, weight: 5, symbol: 'a', left: null, right: null, isLeaf: true },
+      node: {
+        id: 1,
+        weight: 5,
+        symbol: 'a',
+        left: null,
+        right: null,
+        isLeaf: true,
+      },
     });
     heap.push({
       id: 2,
       weight: 2,
-      node: { id: 2, weight: 2, symbol: 'b', left: null, right: null, isLeaf: true },
+      node: {
+        id: 2,
+        weight: 2,
+        symbol: 'b',
+        left: null,
+        right: null,
+        isLeaf: true,
+      },
     });
 
     expect(heap.comparisons).toBeGreaterThan(0);
@@ -81,12 +137,26 @@ describe('MinHeap', () => {
     heap.push({
       id: 1,
       weight: 15,
-      node: { id: 1, weight: 15, symbol: 'a', left: null, right: null, isLeaf: true },
+      node: {
+        id: 1,
+        weight: 15,
+        symbol: 'a',
+        left: null,
+        right: null,
+        isLeaf: true,
+      },
     });
     heap.push({
       id: 2,
       weight: 4,
-      node: { id: 2, weight: 4, symbol: 'b', left: null, right: null, isLeaf: true },
+      node: {
+        id: 2,
+        weight: 4,
+        symbol: 'b',
+        left: null,
+        right: null,
+        isLeaf: true,
+      },
     });
 
     expect(heap.peek()?.id).toBe(2);

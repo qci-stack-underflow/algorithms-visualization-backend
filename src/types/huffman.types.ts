@@ -398,4 +398,3 @@ export const GUTENBERG_REQUEST_TIMEOUT_MS = 10_000;
 /** IDs de los libros oficiales acordados en el catálogo de Project Gutenberg. */
 export const CATALOG_BOOK_IDS = [2000, 1342, 2701, 84, 1661, 11] as const;
 export type CatalogBookId = (typeof CATALOG_BOOK_IDS)[number];
-

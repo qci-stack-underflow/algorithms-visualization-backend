@@ -22,7 +22,8 @@ describe('bit-packer', () => {
     });
 
     it('should pack and unpack round-trip accurately', () => {
-      const bitString = '1101001011101101111100001101111101111000100110000000101111100101011111011000111110100000100000110011101001111000';
+      const bitString =
+        '1101001011101101111100001101111101111000100110000000101111100101011111011000111110100000100000110011101001111000';
       const { data, paddingBits } = packBits(bitString);
       const unpacked = unpackBits(data, paddingBits);
       expect(unpacked).toBe(bitString);
@@ -39,7 +40,8 @@ describe('bit-packer', () => {
 
   describe('encodeTextToBits and prefix property', () => {
     it('should ensure no code is a prefix of another code in Huffman tree', () => {
-      const text = 'En un lugar de la Mancha, de cuyo nombre no quiero acordarme...';
+      const text =
+        'En un lugar de la Mancha, de cuyo nombre no quiero acordarme...';
       const { codes } = buildHuffmanTree(text);
       const codeList = Object.values(codes);
 
@@ -58,14 +60,18 @@ describe('bit-packer', () => {
       const { bitString, packed } = encodeTextToBits(text, codes);
 
       expect(packed.totalBits).toBe(bitString.length);
-      expect(packed.data.length).toBe(Math.ceil((bitString.length + packed.paddingBits) / 8));
+      expect(packed.data.length).toBe(
+        Math.ceil((bitString.length + packed.paddingBits) / 8),
+      );
       expect(unpackBits(packed.data, packed.paddingBits)).toBe(bitString);
     });
 
     it('should throw if a character is not in the code dictionary', () => {
       const text = 'abc';
       const codes = { a: '0', b: '10' }; // falta 'c'
-      expect(() => encodeTextToBits(text, codes)).toThrow(/Símbolo no encontrado/);
+      expect(() => encodeTextToBits(text, codes)).toThrow(
+        /Símbolo no encontrado/,
+      );
     });
   });
 });

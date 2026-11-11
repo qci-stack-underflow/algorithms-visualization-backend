@@ -99,7 +99,8 @@ export function calculateMetrics(params: {
     (((originalBytes - fileSizeBytes) / originalBytes) * 100).toFixed(2),
   );
   const bitsPerSymbol = Number((totalBits / totalCharacters).toFixed(2));
-  const fixedBits = totalCharacters * Math.ceil(Math.log2(Math.max(distinctSymbols, 2)));
+  const fixedBits =
+    totalCharacters * Math.ceil(Math.log2(Math.max(distinctSymbols, 2)));
 
   return {
     originalBytes,
@@ -127,8 +128,7 @@ export function compressHuffman(
   rawText: string,
   options: CompressOptions = {},
 ): HuffmanCompressionOutput {
-  const shouldClean =
-    options.clean ?? (options.source?.type === 'gutenberg');
+  const shouldClean = options.clean ?? options.source?.type === 'gutenberg';
   const text = shouldClean ? TextCleaner.clean(rawText) : rawText;
 
   if (text.length === 0) {
