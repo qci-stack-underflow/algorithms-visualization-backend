@@ -95,10 +95,8 @@ export function writeSuf(options: WriteSufOptions): Buffer {
   offset += 4;
 
   // Total de caracteres Unicode (uint32 BE)
-  let totalUnicodeChars = 0;
-  for (const _ of text) {
-    totalUnicodeChars += 1;
-  }
+  const totalUnicodeChars = [...text].length;
+  
   sufBuffer.writeUInt32BE(totalUnicodeChars, offset);
   offset += 4;
 
