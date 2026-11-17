@@ -9,8 +9,12 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { BOOKS_CATALOG } from '../src/books/books.catalog';
 import { GutenbergClient } from '../src/books/gutenberg.client';
-import { HuffmanEngine } from '../src/huffman/huffman.engine';
-import { HuffmanNode, HuffmanResult, SUF_MAGIC } from '../src/types/huffman.types';
+import { readSuf } from '../src/huffman/utils/suf-format';
+import {
+  HuffmanNode,
+  HuffmanResult,
+  SUF_MAGIC,
+} from '../src/types/huffman.types';
 
 function decodeBitstreamWithJsonTree(
   compressedData: Buffer,
@@ -142,7 +146,8 @@ describe('Huffman Endpoints (e2e - B8)', () => {
     expect(Buffer.isBuffer(sufBuffer)).toBe(true);
     expect(sufBuffer.byteLength).toBe(jsonResult.metrics.fileSizeBytes);
 
-    const parsedSuf = HuffmanEngine.parseSufBuffer(sufBuffer);
+    const { header: parsedSuf, decodedText: sufDecodedText } =
+      readSuf(sufBuffer);
     expect(parsedSuf.magic).toBe(SUF_MAGIC);
     expect(parsedSuf.title).toBe(jsonResult.source.title);
     expect(parsedSuf.totalCharacters).toBe(jsonResult.totalCharacters);
@@ -162,36 +167,36 @@ describe('Huffman Endpoints (e2e - B8)', () => {
     });
 
     // Decodificar los bits del binario .suf usando el árbol JSON y comprobar que reconstruye el texto limpio
+    const compressedData = sufBuffer.subarray(jsonResult.metrics.headerBytes);
     const decodedText = decodeBitstreamWithJsonTree(
-      parsedSuf.compressedData,
+      compressedData,
       parsedSuf.totalCharacters,
       jsonResult.nodes,
       jsonResult.rootId,
     );
 
-    expect(decodedText).toBe(
-      'En un lugar de la Mancha, de cuyo nombre no quiero acordarme,\nno ha mucho tiempo que vivía un hidalgo de los de lanza en astillero.',
-    );
+    const expectedCleanText =
+      'En un lugar de la Mancha, de cuyo nombre no quiero acordarme,\nno ha mucho tiempo que vivía un hidalgo de los de lanza en astillero.';
+    expect(sufDecodedText).toBe(expectedCleanText);
+    expect(decodedText).toBe(expectedCleanText);
   });
 
   it('valida los errores HTTP 400, 404, 413 y 504 en los endpoints', async () => {
     // 400: ID no numérico o negativo
-    await request(app.getHttpServer())
-      .get('/huffman/books/abc')
-      .expect(400);
+    await request(app.getHttpServer()).get('/huffman/books/abc').expect(400);
 
     await request(app.getHttpServer())
       .get('/huffman/books/-5/file')
       .expect(400);
 
     // 404: Libro inexistente
-    await request(app.getHttpServer())
-      .get('/huffman/books/999999')
-      .expect(404);
+    await request(app.getHttpServer()).get('/huffman/books/999999').expect(404);
 
     // 413: Libro demasiado grande (> 4.5 MB)
     fetchBookTextMock.mockRejectedValueOnce(
-      new PayloadTooLargeException('El libro excede el límite máximo de 4.5 MB.'),
+      new PayloadTooLargeException(
+        'El libro excede el límite máximo de 4.5 MB.',
+      ),
     );
     const res413 = await request(app.getHttpServer())
       .get('/huffman/books/2000')

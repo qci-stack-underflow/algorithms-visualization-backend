@@ -23,9 +23,6 @@ import {
 } from '../books/books.catalog';
 import { GutenbergClient } from '../books/gutenberg.client';
 import { LocalBackupService } from '../books/local-backup.service';
-import { HuffmanEngine } from './huffman.engine';
-
-// TODO: remove huffman engine from huffman-endpoints and use from huffman-compressor instead
 
 @Injectable()
 export class HuffmanService {
@@ -125,14 +122,22 @@ export class HuffmanService {
 
   async processHuffmanMetadata(bookId: number): Promise<HuffmanResult> {
     const { text, book } = await this.getBookText(bookId);
-    return HuffmanEngine.compress(text, book);
+    return this.compressToResult(text, {
+      source: book,
+      title: book.title,
+      clean: false,
+    });
   }
 
   async generateSufFile(
     bookId: number,
   ): Promise<{ buffer: Buffer; book: CatalogBook }> {
     const { text, book } = await this.getBookText(bookId);
-    const buffer = HuffmanEngine.generateSufBuffer(text, book.title);
+    const buffer = this.compressToBinary(text, {
+      source: book,
+      title: book.title,
+      clean: false,
+    });
 
     if (buffer.byteLength > VERCEL_MAX_PAYLOAD_BYTES) {
       throw new PayloadTooLargeException(

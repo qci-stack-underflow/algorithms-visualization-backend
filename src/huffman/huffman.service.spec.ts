@@ -7,7 +7,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { GutenbergClient } from '../books/gutenberg.client';
 import { LocalBackupService } from '../books/local-backup.service';
 import { SUF_MAGIC, VERCEL_MAX_PAYLOAD_BYTES } from '../types/huffman.types';
-import { HuffmanEngine } from './huffman.engine';
 import { HuffmanService } from './huffman.service';
 
 describe('HuffmanService (B5 & B7)', () => {
@@ -16,9 +15,11 @@ describe('HuffmanService (B5 & B7)', () => {
 
   beforeEach(async () => {
     gutenbergClient = {
-      fetchBookText: jest.fn().mockResolvedValue(
-        '*** START OF THE PROJECT GUTENBERG EBOOK DON QUIJOTE ***\nEn un lugar de la Mancha, de cuyo nombre no quiero acordarme.\n*** END OF THE PROJECT GUTENBERG EBOOK DON QUIJOTE ***',
-      ),
+      fetchBookText: jest
+        .fn()
+        .mockResolvedValue(
+          '*** START OF THE PROJECT GUTENBERG EBOOK DON QUIJOTE ***\nEn un lugar de la Mancha, de cuyo nombre no quiero acordarme.\n*** END OF THE PROJECT GUTENBERG EBOOK DON QUIJOTE ***',
+        ),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -62,7 +63,7 @@ describe('HuffmanService (B5 & B7)', () => {
     expect(typeof (buffer as unknown)).not.toBe('string');
     expect(buffer.byteLength).toBeLessThan(VERCEL_MAX_PAYLOAD_BYTES);
 
-    const parsed = HuffmanEngine.parseSufBuffer(buffer);
+    const { header: parsed } = service.decompressBinary(buffer);
     expect(parsed.magic).toBe(SUF_MAGIC);
     expect(parsed.title).toBe('Don Quijote');
     expect(parsed.dictionary.length).toBe(parsed.symbolCount);
@@ -70,7 +71,7 @@ describe('HuffmanService (B5 & B7)', () => {
 
   it('lanza 413 PayloadTooLargeException si el binario .suf supera 4.5 MB (B7)', async () => {
     jest
-      .spyOn(HuffmanEngine, 'generateSufBuffer')
+      .spyOn(service, 'compressToBinary')
       .mockReturnValueOnce(Buffer.alloc(VERCEL_MAX_PAYLOAD_BYTES + 1));
 
     await expect(service.generateSufFile(2000)).rejects.toThrow(
