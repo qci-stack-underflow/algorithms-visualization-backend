@@ -85,6 +85,7 @@ export class HuffmanService {
    */
   cleanText(rawText: string): string {
     return TextCleaner.clean(rawText);
+  }
   getCatalog(): readonly CatalogBook[] {
     return BOOKS_CATALOG;
   }
