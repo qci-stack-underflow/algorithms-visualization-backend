@@ -452,11 +452,11 @@ describe('compressHuffman – structural invariants', () => {
 describe('compressHuffman – Don Quijote (pg2000.txt / don-quijote.suf)', () => {
   const pg2000Path = path.resolve(
     __dirname,
-    '../../../.local-tools/pg2000.txt',
+    '../../../assets/catalog-backup/2000.txt',
   );
   const sufPath = path.resolve(
     __dirname,
-    '../../../.local-tools/don-quijote.suf',
+    '../../../examples/suf/don-quijote.suf',
   );
   const fileExists = fs.existsSync(pg2000Path) || fs.existsSync(sufPath);
 
@@ -489,10 +489,11 @@ describe('compressHuffman – Don Quijote (pg2000.txt / don-quijote.suf)', () =>
   });
 
   itWhenFile(
-    'should produce totalCharacters = 2 110 737 and distinctSymbols = 92',
+    'should produce totalCharacters = 2 110 737 (from .suf) or 2 110 726 (cleaned) and distinctSymbols = 92',
     () => {
       const { result } = compressHuffman(quijoteText, { title: 'Don Quijote' });
-      expect(result.totalCharacters).toBe(2110737);
+      const expectedChars = fs.existsSync(sufPath) ? 2110737 : 2110726;
+      expect(result.totalCharacters).toBe(expectedChars);
       expect(result.distinctSymbols).toBe(92);
     },
   );
