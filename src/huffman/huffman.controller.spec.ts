@@ -1,20 +1,115 @@
+import {
+  BadRequestException,
+  NotFoundException,
+  StreamableFile,
+} from '@nestjs/common';
+import { HEADERS_METADATA } from '@nestjs/common/constants';
 import { Test, TestingModule } from '@nestjs/testing';
-import { HuffmanController } from './huffman.controller';
+import { BOOKS_CATALOG } from '../books/books.catalog';
+import { GutenbergClient } from '../books/gutenberg.client';
+import { LocalBackupService } from '../books/local-backup.service';
+import { VERCEL_MAX_PAYLOAD_BYTES } from '../types/huffman.types';
+import {
+  HUFFMAN_CACHE_CONTROL,
+  HuffmanController,
+} from './huffman.controller';
 import { HuffmanService } from './huffman.service';
 
-describe('HuffmanController', () => {
+describe('HuffmanController (B5, B6 & B7)', () => {
   let controller: HuffmanController;
+  let gutenbergClient: GutenbergClient;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [HuffmanController],
-      providers: [HuffmanService],
+      providers: [
+        HuffmanService,
+        {
+          provide: GutenbergClient,
+          useValue: {
+            fetchBookText: jest.fn().mockResolvedValue(
+              '*** START OF THE PROJECT GUTENBERG EBOOK DON QUIJOTE ***\nEn un lugar de la Mancha\n*** END OF THE PROJECT GUTENBERG EBOOK DON QUIJOTE ***',
+            ),
+          },
+        },
+        {
+          provide: LocalBackupService,
+          useValue: new LocalBackupService(),
+        },
+      ],
     }).compile();
 
     controller = module.get<HuffmanController>(HuffmanController);
+    gutenbergClient = module.get<GutenbergClient>(GutenbergClient);
   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
+  it('GET /huffman/books devuelve el catálogo de libros predefinidos', () => {
+    const books = controller.getDefaultBooks();
+    expect(books).toEqual(BOOKS_CATALOG);
+    expect(books.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('GET /huffman/books/:id devuelve el JSON de compresión Huffman compacto (< 4.5 MB)', async () => {
+    const result = await controller.compressByIdMetadata(2000);
+    expect(gutenbergClient.fetchBookText).toHaveBeenCalledWith(2000);
+    expect(result.source.id).toBe(2000);
+    expect(result.totalCharacters).toBe('En un lugar de la Mancha'.length);
+    expect(result.nodes.length).toBeGreaterThan(0);
+    expect(result.steps.length).toBeGreaterThan(0);
+    expect(result.metrics.originalBytes).toBeGreaterThan(0);
+
+    const serializedSize = Buffer.byteLength(JSON.stringify(result), 'utf-8');
+    expect(serializedSize).toBeLessThan(VERCEL_MAX_PAYLOAD_BYTES);
+    expect((result as Record<string, unknown>).encodedDataBits).toBeUndefined();
+  });
+
+  it('GET /huffman/books/:id/file devuelve el archivo .suf como bytes (Buffer), no como string (B7)', async () => {
+    const streamable = await controller.compressByIdDownload(2000);
+    expect(streamable).toBeInstanceOf(StreamableFile);
+    const headers = streamable.getHeaders();
+    expect(headers.type).toBe('application/octet-stream');
+    expect(headers.disposition).toContain('book_2000.suf');
+
+    const chunks: Buffer[] = [];
+    for await (const chunk of streamable.getStream()) {
+      expect(Buffer.isBuffer(chunk)).toBe(true);
+      chunks.push(chunk as Buffer);
+    }
+    const fullBuffer = Buffer.concat(chunks);
+    expect(fullBuffer.subarray(0, 4).toString('ascii')).toBe('SUF1');
+    expect(fullBuffer.byteLength).toBeLessThan(VERCEL_MAX_PAYLOAD_BYTES);
+  });
+
+  it('añade cabeceras Cache-Control en los 3 endpoints para aprovechar la caché de Vercel (B7)', () => {
+    const methods = [
+      HuffmanController.prototype.getDefaultBooks,
+      HuffmanController.prototype.compressByIdMetadata,
+      HuffmanController.prototype.compressByIdDownload,
+    ];
+
+    for (const method of methods) {
+      const headers: Array<{ name: string; value: string }> =
+        Reflect.getMetadata(HEADERS_METADATA, method) ?? [];
+      expect(headers).toEqual(
+        expect.arrayContaining([
+          { name: 'Cache-Control', value: HUFFMAN_CACHE_CONTROL },
+        ]),
+      );
+    }
+  });
+
+  it('lanza 400 BadRequestException cuando el ID es <= 0', async () => {
+    await expect(controller.compressByIdMetadata(0)).rejects.toThrow(
+      BadRequestException,
+    );
+    await expect(controller.compressByIdDownload(-10)).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('lanza 404 NotFoundException cuando el ID no existe', async () => {
+    await expect(controller.compressByIdMetadata(999999)).rejects.toThrow(
+      NotFoundException,
+    );
   });
 });
