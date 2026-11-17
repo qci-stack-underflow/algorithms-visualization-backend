@@ -62,8 +62,7 @@ flowchart TD
     end
 
     subgraph Archivos Locales
-        E5["POST /huffman/compress/file<br/>(Subida multipart .txt)"]
-        E6["GET /huffman/files/:token/download<br/>(Descarga binario temporal)"]
+        E5["POST /huffman/compress/file<br/>(Subida multipart .txt -> Stream combinando JSON + .suf)"]
     end
 
     Client --> E1
@@ -71,7 +70,6 @@ flowchart TD
     Client --> E3
     Client --> E4
     Client --> E5
-    Client --> E6
 ```
 
 ---
@@ -120,28 +118,32 @@ Permite a los usuarios buscar obras literarias en Project Gutenberg mediante la 
   - Filtra y transforma las entradas devueltas descartando metadatos irrelevantes.
   - Conserva únicamente títulos que cuenten con versión de texto plano UTF-8 (`text/plain; charset=utf-8` o `text/plain`).
 - **Respuestas**:
-  - `200 OK`: Arreglo de resultados limpios (`BookInfo[]`).
+  - `200 OK`: Objeto con el resultado de búsqueda (`{ result: BookInfo[] }`).
   - `400 Bad Request`: Si el parámetro `q` está ausente o vacío.
   - `502 Bad Gateway`: Si el servicio de RapidAPI no responde o falla.
 
 #### Ejemplo de Respuesta:
 ```json
-[
-  {
-    "id": 2591,
-    "title": "Grimms' Fairy Tales",
-    "author": "Jacob Grimm, Wilhelm Grimm",
-    "language": "Inglés",
-    "size": "580 KB"
-  },
-  {
-    "id": 52521,
-    "title": "Grimm's Fairy Tales",
-    "author": "Jacob Grimm, Wilhelm Grimm",
-    "language": "Inglés",
-    "size": "620 KB"
-  }
-]
+{
+  "result": [
+    {
+      "type": "gutenberg",
+      "id": 2591,
+      "title": "Grimms' Fairy Tales",
+      "author": "Jacob Grimm, Wilhelm Grimm",
+      "language": "Inglés",
+      "size": "580 KB"
+    },
+    {
+      "type": "gutenberg",
+      "id": 52521,
+      "title": "Grimm's Fairy Tales",
+      "author": "Jacob Grimm, Wilhelm Grimm",
+      "language": "Inglés",
+      "size": "620 KB"
+    }
+  ]
+}
 ```
 
 ---
@@ -248,31 +250,35 @@ Genera y transmite de forma directa el archivo binario empaquetado en formato `.
 ---
 
 ### 2.5. `POST /huffman/compress/file`
-Permite a los usuarios subir un archivo de texto plano propio (`.txt`) mediante `multipart/form-data`. Devuelve el análisis completo interactivo (`HuffmanResult`) y un enlace temporal firmado/efímero para descargar el archivo `.suf` generado sin saturar el almacenamiento del backend.
+Permite a los usuarios subir un archivo de texto plano propio (`.txt`) mediante `multipart/form-data`. Conforme a la decisión de arquitectura adoptada en el Issue #53, la respuesta se transmite de forma síncrona en un **único stream binario con `Content-Type: application/octet-stream`**.
+
+Esta técnica empaqueta en una sola respuesta HTTP los metadatos de análisis (`HuffmanResult`) y el archivo comprimido `.suf` sin sobrepasar el límite de 4.5 MB de Vercel (evitando la penalización de ~33% que provocaría Base64).
 
 - **Método**: `POST`
 - **Ruta**: `/huffman/compress/file`
-- **Content-Type**: `multipart/form-data`
+- **Content-Type de Petición**: `multipart/form-data`
 - **Parámetros Form-Data**:
-  - `file` (archivo binario / texto, obligatorio): Archivo de texto plano `.txt`.
+  - `file` (archivo texto, obligatorio): Archivo de texto plano `.txt`.
   - `title` (string, opcional): Título personalizado del texto (por defecto toma el nombre del archivo).
 - **Validaciones**:
   - Solo se aceptan archivos de tipo texto (`text/plain` o extensión `.txt`).
-  - Tamaño máximo permitido: **6 MB**.
-- **Respuestas**:
-  - `200 OK`: Objeto con `result` (`HuffmanResult`) y `download`:
-    ```json
-    {
-      "result": { ... },
-      "download": {
-        "url": "/huffman/files/a1b2c3d4-e5f6-7890/download",
-        "expiresAt": "2026-11-01T17:45:00.000Z",
-        "filename": "mi-archivo.suf"
-      }
-    }
-    ```
+  - Tamaño máximo permitido: **4 MB** (`MAX_UPLOAD_FILE_SIZE_BYTES`), previendo el límite de 4.5 MB del cuerpo en Vercel.
+- **Cabeceras de Respuesta**:
+  - `Content-Type: application/octet-stream`
+  - `Content-Disposition: attachment; filename="<nombre>.suf"`
+- **Estructura del Binario de Respuesta Combinada**:
+  ```
+  +--------------------------------------------------------------------------+
+  | Longitud del JSON: uint32 BE (4 bytes)                                   |
+  +--------------------------------------------------------------------------+
+  | JSON HuffmanResult: Codificado en UTF-8 (longitud indicada previamente)  |
+  +--------------------------------------------------------------------------+
+  | Archivo binario .suf completo: Iniciando con magic bytes "SUF1"          |
+  +--------------------------------------------------------------------------+
+  ```
+- **Respuestas de Error (formato JSON estándar con `message` y `statusCode`)**:
   - `400 Bad Request`: Si no se adjuntó ningún archivo o no es un `.txt` válido.
-  - `413 Payload Too Large`: Si el archivo supera el límite de 6 MB.
+  - `413 Payload Too Large`: Si el archivo supera el límite de 4 MB.
 
 ---
 
