@@ -453,22 +453,31 @@ describe('Huffman Endpoints (e2e - B8)', () => {
     const mockResults = [
       {
         type: 'gutenberg',
-        id: 2000,
-        title: 'Don Quijote',
+        id: 996,
+        title: 'Don Quixote',
         author: 'Cervantes Saavedra, Miguel de',
-        language: 'Español',
+        language: 'Inglés',
+        size: 'Desconocido',
+      },
+      {
+        type: 'gutenberg',
+        id: 1342,
+        title: 'Pride and Prejudice',
+        author: 'Austen, Jane',
+        language: 'Inglés',
         size: 'Desconocido',
       },
     ];
     searchBooksMock.mockResolvedValueOnce(mockResults);
 
     const okRes = await request(app.getHttpServer())
-      .get('/huffman/books/search?q=quijote')
+      .get('/huffman/books/search?q=quixote')
       .expect(200);
 
     expect(okRes.headers['cache-control']).toContain('s-maxage=604800');
-    expect(searchBooksMock).toHaveBeenCalledWith('quijote');
-    expect(okRes.body).toEqual({ result: mockResults });
+    expect(searchBooksMock).toHaveBeenCalledWith('quixote');
+    // Solo el que coincide con la búsqueda (RapidAPI puede ignorarla, #62).
+    expect(okRes.body).toEqual({ result: [mockResults[0]] });
 
     // 400: q ausente o vacío
     await request(app.getHttpServer()).get('/huffman/books/search').expect(400);
@@ -482,7 +491,7 @@ describe('Huffman Endpoints (e2e - B8)', () => {
       new BadGatewayException('Error al consultar RapidAPI.'),
     );
     const res502 = await request(app.getHttpServer())
-      .get('/huffman/books/search?q=cervantes')
+      .get('/huffman/books/search?q=zzzzqq')
       .expect(502);
 
     expect(res502.body).toMatchObject({

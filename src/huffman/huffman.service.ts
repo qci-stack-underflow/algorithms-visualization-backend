@@ -36,6 +36,29 @@ export interface UploadedTextFile {
   buffer?: Buffer;
 }
 
+// Palabras de una búsqueda, sin acentos ni mayúsculas ("Quijote" encuentra
+// "quijote" y "Ulloa" encuentra "ulloa").
+const normalizeForSearch = (text: string): string =>
+  text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+function searchTerms(query: string): string[] {
+  return normalizeForSearch(query)
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((term) => term.length > 0);
+}
+
+// Un libro coincide si cada palabra buscada aparece en su título o su autor.
+function matchesSearch(
+  book: { title: string; author?: string },
+  terms: string[],
+): boolean {
+  const text = normalizeForSearch(`${book.title} ${book.author ?? ''}`);
+  return terms.length > 0 && terms.every((term) => text.includes(term));
+}
+
 // Título máximo de un archivo subido, en caracteres.
 export const MAX_TITLE_CHARACTERS = 200;
 
@@ -148,8 +171,30 @@ export class HuffmanService {
       );
     }
 
-    const result = await this.rapidApiClient.searchBooks(normalized);
-    return { result };
+    // Los libros del catálogo que coinciden van primero: son los que
+    // funcionan aunque Gutenberg no responda (tienen copia local).
+    const terms = searchTerms(normalized);
+    const fromCatalog = BOOKS_CATALOG.filter((book) =>
+      matchesSearch(book, terms),
+    );
+
+    let remote: BookInfo[];
+    try {
+      remote = await this.rapidApiClient.searchBooks(normalized);
+    } catch (error: unknown) {
+      // Sin RapidAPI, el catálogo sigue respondiendo lo que conoce.
+      if (fromCatalog.length > 0) return { result: [...fromCatalog] };
+      throw error;
+    }
+
+    // RapidAPI devuelve los mismos 32 libros populares para cualquier
+    // consulta (backend#62), así que se conservan solo los que coinciden con
+    // lo buscado en el título o el autor.
+    const known = new Set(fromCatalog.map((book) => book.id));
+    const relevant = remote.filter(
+      (book) => !known.has(book.id) && matchesSearch(book, terms),
+    );
+    return { result: [...fromCatalog, ...relevant] };
   }
 
   async getBookText(

@@ -441,22 +441,59 @@ describe('HuffmanService (B5 & B7)', () => {
     ).toThrow(PayloadTooLargeException);
   });
 
-  it('busca libros en RapidAPI mediante searchBooks y retorna { result: BookInfo[] }', async () => {
-    const mockBooks = [
-      {
-        type: 'gutenberg' as const,
-        id: 2000,
-        title: 'Don Quijote',
-        author: 'Cervantes',
-        language: 'Español',
-        size: 'Desconocido',
-      },
-    ];
-    rapidApiClient.searchBooks.mockResolvedValueOnce(mockBooks);
+  const libroRemoto = (id: number, title: string, author: string) => ({
+    type: 'gutenberg' as const,
+    id,
+    title,
+    author,
+    language: 'Inglés',
+    size: 'Desconocido',
+  });
 
-    const response = await service.searchBooks('  quijote  ');
-    expect(rapidApiClient.searchBooks).toHaveBeenCalledWith('quijote');
-    expect(response).toEqual({ result: mockBooks });
+  it('busca en RapidAPI y retorna { result: BookInfo[] } con los que coinciden', async () => {
+    rapidApiClient.searchBooks.mockResolvedValueOnce([
+      libroRemoto(1342, 'Pride and Prejudice', 'Austen, Jane'),
+      libroRemoto(946, 'Lady Susan', 'Austen, Jane'),
+      libroRemoto(2701, 'Moby Dick; Or, The Whale', 'Melville, Herman'),
+    ]);
+
+    const response = await service.searchBooks('  jane austen  ');
+    expect(rapidApiClient.searchBooks).toHaveBeenCalledWith('jane austen');
+    // Pride and Prejudice está en el catálogo: va primero, con sus datos.
+    expect(response.result.map((book) => book.id)).toEqual([1342, 946]);
+    expect(response.result[0].author).toBe('Jane Austen');
+  });
+
+  it('descarta los libros que no coinciden (RapidAPI ignora la consulta, backend#62)', async () => {
+    // Lo que responde RapidAPI en producción para cualquier consulta.
+    rapidApiClient.searchBooks.mockResolvedValue([
+      libroRemoto(1342, 'Pride and Prejudice', 'Austen, Jane'),
+      libroRemoto(
+        84,
+        'Frankenstein; or, The modern Prometheus',
+        'Shelley, Mary',
+      ),
+      libroRemoto(2701, 'Moby Dick; Or, The Whale', 'Melville, Herman'),
+    ]);
+
+    expect((await service.searchBooks('zzzzqq')).result).toEqual([]);
+    expect(
+      (await service.searchBooks('quijote')).result.map((book) => book.id),
+    ).toEqual([2000]);
+    expect(
+      (await service.searchBooks('Pardo Bazán')).result.map((book) => book.id),
+    ).toEqual([18005]);
+    expect(
+      (await service.searchBooks('frankenstein')).result.map((book) => book.id),
+    ).toEqual([84]);
+  });
+
+  it('sin RapidAPI, responde los libros del catálogo que coinciden', async () => {
+    rapidApiClient.searchBooks.mockRejectedValueOnce(
+      new BadGatewayException('Error en RapidAPI'),
+    );
+    const response = await service.searchBooks('ulloa');
+    expect(response.result.map((book) => book.id)).toEqual([18005]);
   });
 
   it('lanza BadRequestException en searchBooks cuando q falta o está vacío y propaga BadGatewayException', async () => {
@@ -467,10 +504,11 @@ describe('HuffmanService (B5 & B7)', () => {
       BadRequestException,
     );
 
+    // Sin coincidencias en el catálogo, el error de RapidAPI se propaga.
     rapidApiClient.searchBooks.mockRejectedValueOnce(
       new BadGatewayException('Error en RapidAPI'),
     );
-    await expect(service.searchBooks('quijote')).rejects.toThrow(
+    await expect(service.searchBooks('zzzzqq')).rejects.toThrow(
       BadGatewayException,
     );
   });
