@@ -119,7 +119,7 @@ Permite a los usuarios buscar obras literarias en Project Gutenberg mediante la 
   - Consulta RapidAPI con la clave configurada en las variables de entorno.
   - Filtra y transforma las entradas devueltas descartando metadatos irrelevantes.
   - Conserva únicamente títulos que cuenten con versión de texto plano UTF-8 (`text/plain; charset=utf-8` o `text/plain`).
-  - Conserva solo los libros en cuyo título o autor aparece cada palabra buscada, sin distinguir acentos ni mayúsculas. RapidAPI devuelve los mismos 32 libros populares para cualquier consulta (#62), así que sin este filtro `q=zzzzqq` daba 32 resultados.
+  - Conserva solo los libros en cuyo título o autor cada palabra buscada es el inicio de una palabra, sin distinguir acentos ni mayúsculas ("el" encuentra "El sombrero de tres picos", pero no "Shelley"). RapidAPI devuelve los mismos 32 libros populares para cualquier consulta (#62), así que sin este filtro `q=zzzzqq` daba 32 resultados.
   - Los libros del catálogo que coinciden van primero, porque funcionan aunque Gutenberg no responda. Si RapidAPI falla y hay coincidencias en el catálogo, se responden esas en lugar del error.
 - **Respuestas**:
   - `200 OK`: Objeto con el resultado de búsqueda (`{ result: BookInfo[] }`), que puede estar vacío.

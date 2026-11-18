@@ -50,13 +50,18 @@ function searchTerms(query: string): string[] {
     .filter((term) => term.length > 0);
 }
 
-// Un libro coincide si cada palabra buscada aparece en su título o su autor.
+// Un libro coincide si cada palabra buscada es el inicio de una palabra de su
+// título o su autor: "el" encuentra "El ingenioso hidalgo" pero no "Shelley"
+// ni "Melville", y "quij" encuentra "Quijote".
 function matchesSearch(
   book: { title: string; author?: string },
   terms: string[],
 ): boolean {
-  const text = normalizeForSearch(`${book.title} ${book.author ?? ''}`);
-  return terms.length > 0 && terms.every((term) => text.includes(term));
+  const words = searchTerms(`${book.title} ${book.author ?? ''}`);
+  return (
+    terms.length > 0 &&
+    terms.every((term) => words.some((word) => word.startsWith(term)))
+  );
 }
 
 // Título máximo de un archivo subido, en caracteres.
