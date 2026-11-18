@@ -59,6 +59,9 @@ export class HuffmanExceptionFilter implements ExceptionFilter {
       case HttpStatus.PAYLOAD_TOO_LARGE:
         errorType = 'Payload Too Large';
         break;
+      case HttpStatus.BAD_GATEWAY:
+        errorType = 'Bad Gateway';
+        break;
       case HttpStatus.GATEWAY_TIMEOUT:
         errorType = 'Gateway Timeout';
         break;

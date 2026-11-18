@@ -72,9 +72,14 @@ Requisitos: Node.js 22 o superior y pnpm.
 git clone https://github.com/qci-stack-underflow/algorithms-visualization-backend.git
 cd algorithms-visualization-backend
 pnpm install
-cp .env.example .env     # opcional: define PORT (por defecto 3000)
+cp .env.example .env     # define PORT (3000) y credenciales RAPID_API_* para búsqueda
 pnpm start:dev           # http://localhost:3000
 ```
+
+> **Variables de entorno requeridas para búsqueda en RapidAPI** (en `.env` local y en Vercel Preview/Production):
+> - `RAPID_API_KEY`: clave de RapidAPI
+> - `RAPID_API_HOST`: host de la API en RapidAPI (p. ej. `project-gutenberg-free-books-api1.p.rapidapi.com`)
+> - `RAPID_API_URL`: URL completa del endpoint de búsqueda (p. ej. `https://project-gutenberg-free-books-api1.p.rapidapi.com/books`)
 
 Pruebas:
 
@@ -191,19 +196,18 @@ Errores: 400 si la entrada no es válida (no son números, más de 50 elementos,
 |---|---|---|---|
 | GET | `/huffman` | Descripción general y pseudocódigo del algoritmo de Huffman | — |
 | GET | `/huffman/books` | Catálogo de libros predefinidos de Project Gutenberg (`id`, `title`, `author`, `language`, `size`, `sizeBytes`) | `Cache-Control: public, max-age=86400, s-maxage=604800` |
+| GET | `/huffman/books/search?q={query}` | Busca obras de Project Gutenberg en RapidAPI por título/autor/palabras clave y devuelve `{ result: BookInfo[] }` | `Cache-Control: public, max-age=86400, s-maxage=604800` |
 | GET | `/huffman/books/:id` | Descarga, limpia y comprime el libro con Huffman; devuelve el árbol plano (`nodes`), pasos animables (`steps`), tabla de frecuencias (`table`), códigos (`codes`), métricas (`metrics`) y vista previa (`preview`) | `Cache-Control: public, max-age=86400, s-maxage=604800` |
 | GET | `/huffman/books/:id/file` | Genera y descarga el archivo binario comprimido `.suf` (`SUF1`) como `Buffer` (`StreamableFile`) | `Content-Type: application/octet-stream`, `Content-Disposition: attachment; filename="book_:id.suf"`, `Cache-Control` |
 | POST | `/huffman/compress/file?metadata={true\|false}` | Recibe un archivo `.txt` vía `multipart/form-data` (`file`, `title` opcional). Con `metadata=true` (por defecto) devuelve `[uint32 BE jsonLength][JSON HuffmanResult][binario .suf]`; con `metadata=false` devuelve únicamente el binario `.suf` | `Content-Type: application/octet-stream`, `Content-Disposition: attachment; filename="<nombre>.suf"` |
 | POST | `/huffman/decompress/file?metadata={true\|false}` | Recibe un archivo `.suf` vía `multipart/form-data` (`file`) y devuelve el texto plano `.txt` reconstruido. Con `metadata=false` (por defecto) espera `.suf` puro (`SUF1`); con `metadata=true` descarta el bloque JSON previo | `Content-Type: text/plain; charset=utf-8`, `Content-Disposition: attachment; filename="<nombre>.txt"` |
 
 #### Códigos de Error en `/huffman`
-- **`400 Bad Request`**: El parámetro `:id` no es un número entero positivo válido.
-- **`404 Not Found`**: El libro solicitado no existe en Project Gutenberg.
+- **`400 Bad Request`**: El parámetro `:id` no es un número entero positivo válido, `q` está vacío/ausente en `/huffman/books/search`, o el archivo/parámetro enviado es inválido.
+- **`404 Not Found`**: El libro solicitado no existe en el catálogo ni en Project Gutenberg.
 - **`413 Payload Too Large`**: El libro o la respuesta supera el límite de **4.5 MB** de Vercel Serverless Functions.
-- **`502 Bad Gateway`**: Project Gutenberg no está disponible (por ejemplo, responde `503` o una página HTML) y el libro no tiene respaldo local.
-- **`504 Gateway Timeout`**: Project Gutenberg no respondió dentro del tiempo límite de **10 segundos** y el libro no tiene respaldo local.
-
-`/huffman/books/:id` acepta cualquier libro de Project Gutenberg, no solo los del catálogo. Don Quijote (`2000`), Frankenstein (`84`) y Los pazos de Ulloa (`18005`) tienen el libro completo en `assets/catalog-backup/` y funcionan aunque Gutenberg no responda, cosa que pasa seguido desde Vercel.
+- **`502 Bad Gateway`**: El servicio de búsqueda en RapidAPI devolvió un error o no está disponible.
+- **`504 Gateway Timeout`**: Project Gutenberg o RapidAPI no respondió dentro del tiempo límite de **10 segundos**.
 
 #### Comandos locales para probar Huffman
 ```bash
@@ -212,6 +216,9 @@ pnpm start:dev
 
 # Consultar catálogo de libros
 curl -i http://localhost:3000/huffman/books
+
+# Buscar libros en Project Gutenberg vía RapidAPI
+curl -i "http://localhost:3000/huffman/books/search?q=quijote"
 
 # Obtener JSON de compresión de Don Quijote (ID 2000)
 curl -s http://localhost:3000/huffman/books/2000 | head -c 500

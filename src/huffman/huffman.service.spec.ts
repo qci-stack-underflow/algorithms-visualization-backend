@@ -8,6 +8,7 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import { GutenbergClient } from '../books/gutenberg.client';
 import { LocalBackupService } from '../books/local-backup.service';
+import { RapidApiGutenbergClient } from '../books/rapidapi-gutenberg.client';
 import {
   HuffmanResult,
   MAX_UPLOAD_FILE_SIZE_BYTES,
@@ -19,6 +20,7 @@ import { HuffmanService } from './huffman.service';
 describe('HuffmanService (B5 & B7)', () => {
   let service: HuffmanService;
   let gutenbergClient: { fetchBookText: jest.Mock };
+  let rapidApiClient: { searchBooks: jest.Mock };
 
   beforeEach(async () => {
     gutenbergClient = {
@@ -28,12 +30,16 @@ describe('HuffmanService (B5 & B7)', () => {
           '*** START OF THE PROJECT GUTENBERG EBOOK DON QUIJOTE ***\nEn un lugar de la Mancha, de cuyo nombre no quiero acordarme.\n*** END OF THE PROJECT GUTENBERG EBOOK DON QUIJOTE ***',
         ),
     };
+    rapidApiClient = {
+      searchBooks: jest.fn().mockResolvedValue([]),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         HuffmanService,
         { provide: GutenbergClient, useValue: gutenbergClient },
         { provide: LocalBackupService, useValue: new LocalBackupService() },
+        { provide: RapidApiGutenbergClient, useValue: rapidApiClient },
       ],
     }).compile();
 
@@ -409,5 +415,39 @@ describe('HuffmanService (B5 & B7)', () => {
         buffer: Buffer.from('SUF1'),
       }),
     ).toThrow(PayloadTooLargeException);
+  });
+
+  it('busca libros en RapidAPI mediante searchBooks y retorna { result: BookInfo[] }', async () => {
+    const mockBooks = [
+      {
+        type: 'gutenberg' as const,
+        id: 2000,
+        title: 'Don Quijote',
+        author: 'Cervantes',
+        language: 'Español',
+        size: 'Desconocido',
+      },
+    ];
+    rapidApiClient.searchBooks.mockResolvedValueOnce(mockBooks);
+
+    const response = await service.searchBooks('  quijote  ');
+    expect(rapidApiClient.searchBooks).toHaveBeenCalledWith('quijote');
+    expect(response).toEqual({ result: mockBooks });
+  });
+
+  it('lanza BadRequestException en searchBooks cuando q falta o está vacío y propaga BadGatewayException', async () => {
+    await expect(service.searchBooks(undefined)).rejects.toThrow(
+      BadRequestException,
+    );
+    await expect(service.searchBooks('   ')).rejects.toThrow(
+      BadRequestException,
+    );
+
+    rapidApiClient.searchBooks.mockRejectedValueOnce(
+      new BadGatewayException('Error en RapidAPI'),
+    );
+    await expect(service.searchBooks('quijote')).rejects.toThrow(
+      BadGatewayException,
+    );
   });
 });

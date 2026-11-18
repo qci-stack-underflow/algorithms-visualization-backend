@@ -20,6 +20,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { CatalogBook } from '../books/books.catalog';
 import { HuffmanExceptionFilter } from '../common/filters/huffman-exception.filter';
 import {
+  BookInfo,
   HuffmanResult,
   MAX_UPLOAD_FILE_SIZE_BYTES,
 } from '../types/huffman.types';
@@ -70,8 +71,9 @@ export class HuffmanController {
   }
 
   @Get('books/search')
-  searchBook() {
-    return 'List of found books by query param';
+  @Header('Cache-Control', HUFFMAN_CACHE_CONTROL)
+  searchBook(@Query('q') query?: string): Promise<{ result: BookInfo[] }> {
+    return this.huffmanService.searchBooks(query);
   }
 
   @Get('books/:id')

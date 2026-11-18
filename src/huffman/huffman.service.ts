@@ -4,6 +4,7 @@ import {
   PayloadTooLargeException,
 } from '@nestjs/common';
 import {
+  BookInfo,
   HUFFMAN_PSEUDOCODE,
   HuffmanResult,
   MAX_UPLOAD_FILE_SIZE_BYTES,
@@ -26,6 +27,7 @@ import {
 } from '../books/books.catalog';
 import { GutenbergClient } from '../books/gutenberg.client';
 import { LocalBackupService } from '../books/local-backup.service';
+import { RapidApiGutenbergClient } from '../books/rapidapi-gutenberg.client';
 
 export interface UploadedTextFile {
   originalname?: string;
@@ -78,6 +80,7 @@ export class HuffmanService {
   constructor(
     private readonly gutenbergClient: GutenbergClient,
     private readonly localBackup: LocalBackupService,
+    private readonly rapidApiClient: RapidApiGutenbergClient,
   ) {}
 
   getHuffman() {
@@ -137,15 +140,18 @@ export class HuffmanService {
     return BOOKS_CATALOG;
   }
 
-  /**
-   * Descarga el texto de un libro de Project Gutenberg y lo limpia.
-   *
-   * - Los libros del catálogo con copia en assets/catalog-backup/ se sirven
-   *   desde esa copia si Gutenberg falla por cualquier motivo (no responde,
-   *   tarda o contesta 503), porque es el mismo libro completo.
-   * - Cualquier otro número de Gutenberg (un libro pegado como enlace) se
-   *   descarga en línea; sus datos salen de la cabecera del propio texto.
-   */
+  async searchBooks(query?: string): Promise<{ result: BookInfo[] }> {
+    const normalized = query?.trim() ?? '';
+    if (normalized.length === 0) {
+      throw new BadRequestException(
+        'El parámetro de búsqueda "q" es obligatorio y no puede estar vacío.',
+      );
+    }
+
+    const result = await this.rapidApiClient.searchBooks(normalized);
+    return { result };
+  }
+
   async getBookText(
     bookId: number,
   ): Promise<{ text: string; book: CatalogBook }> {

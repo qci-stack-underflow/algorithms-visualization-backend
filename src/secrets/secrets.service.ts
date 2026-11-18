@@ -10,4 +10,16 @@ export class SecretsService {
 
     return parseInt(portStr);
   }
+
+  get RAPID_API_KEY(): string {
+    return this.configService.get<string>('RAPID_API_KEY', 'none');
+  }
+
+  get RAPID_API_URL(): string {
+    return this.configService.get<string>('RAPID_API_URL', 'none');
+  
+  }
+  get RAPID_API_HOST(): string {
+    return this.configService.get<string>('RAPID_API_HOST', 'none');
+  }
 }
