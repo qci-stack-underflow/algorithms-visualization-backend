@@ -14,7 +14,7 @@ import { HuffmanService } from './huffman.service';
 
 describe('HuffmanController (B5, B6 & B7)', () => {
   let controller: HuffmanController;
-  let gutenbergClient: GutenbergClient;
+  let gutenbergClient: { fetchBookText: jest.Mock };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -39,7 +39,7 @@ describe('HuffmanController (B5, B6 & B7)', () => {
     }).compile();
 
     controller = module.get<HuffmanController>(HuffmanController);
-    gutenbergClient = module.get<GutenbergClient>(GutenbergClient);
+    gutenbergClient = module.get(GutenbergClient);
   });
 
   it('GET /huffman/books devuelve el catálogo de libros predefinidos', () => {
@@ -81,14 +81,19 @@ describe('HuffmanController (B5, B6 & B7)', () => {
 
   it('añade cabeceras Cache-Control en los 3 endpoints para aprovechar la caché de Vercel (B7)', () => {
     const methods = [
-      HuffmanController.prototype.getDefaultBooks,
-      HuffmanController.prototype.compressByIdMetadata,
-      HuffmanController.prototype.compressByIdDownload,
-    ];
+      'getDefaultBooks',
+      'compressByIdMetadata',
+      'compressByIdDownload',
+    ] as const;
 
-    for (const method of methods) {
-      const headers: Array<{ name: string; value: string }> =
-        Reflect.getMetadata(HEADERS_METADATA, method) ?? [];
+    for (const name of methods) {
+      const handler = Object.getOwnPropertyDescriptor(
+        HuffmanController.prototype,
+        name,
+      )?.value as object;
+      const headers =
+        (Reflect.getMetadata(HEADERS_METADATA, handler) as
+          Array<{ name: string; value: string }> | undefined) ?? [];
       expect(headers).toEqual(
         expect.arrayContaining([
           { name: 'Cache-Control', value: HUFFMAN_CACHE_CONTROL },
@@ -106,7 +111,10 @@ describe('HuffmanController (B5, B6 & B7)', () => {
     );
   });
 
-  it('lanza 404 NotFoundException cuando el ID no existe', async () => {
+  it('lanza 404 NotFoundException cuando el libro no existe en Gutenberg', async () => {
+    gutenbergClient.fetchBookText.mockRejectedValueOnce(
+      new NotFoundException('No existe'),
+    );
     await expect(controller.compressByIdMetadata(999999)).rejects.toThrow(
       NotFoundException,
     );

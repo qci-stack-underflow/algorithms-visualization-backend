@@ -489,11 +489,10 @@ describe('compressHuffman – Don Quijote (pg2000.txt / don-quijote.suf)', () =>
   });
 
   itWhenFile(
-    'should produce totalCharacters = 2 110 737 (from .suf) or 2 110 726 (cleaned) and distinctSymbols = 92',
+    'should produce totalCharacters = 2 110 737 and distinctSymbols = 92',
     () => {
       const { result } = compressHuffman(quijoteText, { title: 'Don Quijote' });
-      const expectedChars = fs.existsSync(sufPath) ? 2110737 : 2110726;
-      expect(result.totalCharacters).toBe(expectedChars);
+      expect(result.totalCharacters).toBe(2110737);
       expect(result.distinctSymbols).toBe(92);
     },
   );
@@ -532,7 +531,7 @@ describe('compressHuffman – Don Quijote (pg2000.txt / don-quijote.suf)', () =>
       const { result, sufBuffer } = compressHuffman(rawPg2000Text, {
         title: 'Don Quijote Raw',
       });
-      expect(result.totalCharacters).toBe(2168116);
+      expect(result.totalCharacters).toBe(2168090);
       expect(result.distinctSymbols).toBe(111);
       expect(result.nodes.length).toBe(2 * 111 - 1);
       expect(result.steps.length).toBe(3 * 111 - 2);

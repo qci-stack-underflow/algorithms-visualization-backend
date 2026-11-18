@@ -151,22 +151,25 @@ Permite a los usuarios buscar obras literarias en Project Gutenberg mediante la 
 ---
 
 ### 2.3. `GET /huffman/books/:id`
-Descarga (o recupera de caché local) el libro correspondiente desde Project Gutenberg, aplica el algoritmo de Huffman y genera tanto el árbol como los pasos de animación y métricas analíticas.
+Descarga el libro correspondiente desde Project Gutenberg, aplica el algoritmo de Huffman y genera tanto el árbol como los pasos de animación y métricas analíticas.
 
 - **Método**: `GET`
 - **Ruta**: `/huffman/books/:id`
 - **Parámetros**:
-  - `id` (entero, obligatorio): ID numérico del libro en Project Gutenberg (ej. `2000`).
+  - `id` (entero, obligatorio): ID numérico del libro en Project Gutenberg (ej. `2000`). Puede ser cualquier libro de Gutenberg, no solo los del catálogo (es lo que usa el campo de enlace del frontend); en ese caso el título, el autor y el idioma salen de la cabecera del propio texto (`Title:`, `Author:`, `Language:`).
+- **Respaldo local**: Don Quijote (`2000`), Frankenstein (`84`) y Los pazos de Ulloa (`18005`) tienen el libro completo en `assets/catalog-backup/`. Si Gutenberg falla por cualquier motivo (no responde, tarda más de 10 s o contesta `503`, lo que pasa seguido desde Vercel), se comprimen desde esa copia. Los demás libros solo se descargan en línea. Una prueba exige que cada copia sea el libro completo, con las marcas `START` y `END` y del mismo tamaño que anuncia el catálogo.
 - **Límites y Restricciones**:
-  - Tamaño máximo de descarga: **6 MB**.
-  - Si el libro supera los 6 MB, la petición es abortada inmediatamente con error `413 Payload Too Large`.
+  - Tamaño máximo de descarga: **4.5 MB**.
+  - Si el libro supera los 4.5 MB, la petición es abortada inmediatamente con error `413 Payload Too Large`.
   - Timeout de descarga de Gutenberg: **10 segundos**.
+  - Una respuesta de Gutenberg con `Content-Type: text/html` (página de aviso o bloqueo) no se toma como el libro.
 - **Respuestas**:
   - `200 OK`: Objeto de respuesta completo (`HuffmanResult`).
   - `400 Bad Request`: Si el `id` no es un número entero válido.
   - `404 Not Found`: Si el libro no existe en Project Gutenberg.
-  - `413 Payload Too Large`: Si el archivo excede los 6 MB.
-  - `504 Gateway Timeout`: Si la descarga supera los 10 segundos.
+  - `413 Payload Too Large`: Si el archivo excede los 4.5 MB.
+  - `502 Bad Gateway`: Si Gutenberg no está disponible y el libro no tiene respaldo local.
+  - `504 Gateway Timeout`: Si la descarga supera los 10 segundos y el libro no tiene respaldo local.
 
 #### Estructura de Respuesta (`HuffmanResult` para libro Gutenberg):
 ```json
@@ -307,6 +310,7 @@ Permite subir un archivo comprimido `.suf` mediante `multipart/form-data` y desc
   - `200 OK`: Descarga directa del texto plano descomprimido en UTF-8.
   - `400 Bad Request`: Si no se adjuntó archivo, no tiene extensión `.suf`, el formato `SUF1`/JSON es inválido o está corrupto, o `metadata` no es `"true"`/`"false"`.
   - `413 Payload Too Large`: Si el archivo supera los 4 MB o el texto descomprimido excede los 4.5 MB de Vercel.
+- **Protección contra archivos alterados**: antes de decodificar se comprueba con la cabecera que el número de caracteres declarado no supere el límite de 4.5 MB ni los bits disponibles, que las frecuencias sumen ese número y que los códigos sean prefijo. Sin esas revisiones, un `.suf` de 4 MB con un solo símbolo de código `0` declara 33 millones de caracteres y agota la memoria de la función. La decodificación recorre el árbol bit a bit, sin construir la cadena de bits completa.
 
 ---
 
