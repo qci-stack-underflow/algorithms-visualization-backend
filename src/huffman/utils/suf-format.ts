@@ -96,7 +96,7 @@ export function writeSuf(options: WriteSufOptions): Buffer {
 
   // Total de caracteres Unicode (uint32 BE)
   const totalUnicodeChars = [...text].length;
-  
+
   sufBuffer.writeUInt32BE(totalUnicodeChars, offset);
   offset += 4;
 
@@ -170,14 +170,27 @@ export function readSuf(buffer: Buffer): ReadSufResult {
   // 3. Padding bits
   const paddingBits = buffer.readUInt8(offset);
   offset += 1;
+  if (paddingBits > 7) {
+    throw new Error(
+      `Bits de relleno inválidos en la cabecera .suf: ${paddingBits}.`,
+    );
+  }
 
   // 4. Cantidad de símbolos k
   const symbolCount = buffer.readUInt16BE(offset);
   offset += 2;
+  if (symbolCount === 0) {
+    throw new Error(
+      'El diccionario del archivo .suf debe contener al menos un símbolo.',
+    );
+  }
 
   // 5. Título
   const titleLength = buffer.readUInt16BE(offset);
   offset += 2;
+  if (offset + titleLength > buffer.length) {
+    throw new Error('Archivo .suf corrupto o truncado al leer el título.');
+  }
   const title = buffer.toString('utf-8', offset, offset + titleLength);
   offset += titleLength;
 
@@ -186,8 +199,19 @@ export function readSuf(buffer: Buffer): ReadSufResult {
   const codeToSymbolMap = new Map<string, string>();
 
   for (let i = 0; i < symbolCount; i += 1) {
+    if (offset + 1 > buffer.length) {
+      throw new Error(
+        'Archivo .suf corrupto o truncado al leer el diccionario.',
+      );
+    }
     const symbolLength = buffer.readUInt8(offset);
     offset += 1;
+
+    if (symbolLength === 0 || offset + symbolLength + 5 > buffer.length) {
+      throw new Error(
+        'Entrada de símbolo corrupta o truncada en el diccionario .suf.',
+      );
+    }
     const symbol = buffer.toString('utf-8', offset, offset + symbolLength);
     offset += symbolLength;
 
@@ -196,8 +220,20 @@ export function readSuf(buffer: Buffer): ReadSufResult {
 
     const codeLength = buffer.readUInt8(offset);
     offset += 1;
+
+    if (codeLength === 0 || offset + codeLength > buffer.length) {
+      throw new Error(
+        'Código Huffman corrupto o truncado en el diccionario .suf.',
+      );
+    }
     const code = buffer.toString('ascii', offset, offset + codeLength);
     offset += codeLength;
+
+    if (!/^[01]+$/.test(code)) {
+      throw new Error(
+        `Código Huffman inválido en el diccionario .suf: "${code}".`,
+      );
+    }
 
     dictionary.push({ symbol, frequency, codeLength, code });
     codeToSymbolMap.set(code, symbol);
@@ -210,14 +246,22 @@ export function readSuf(buffer: Buffer): ReadSufResult {
   // Decodificación prefijo
   let decodedText = '';
   let currentBits = '';
+  let decodedCount = 0;
 
   for (const bit of bitString) {
     currentBits += bit;
     const matchedSymbol = codeToSymbolMap.get(currentBits);
     if (matchedSymbol !== undefined) {
       decodedText += matchedSymbol;
+      decodedCount += 1;
       currentBits = '';
     }
+  }
+
+  if (currentBits.length > 0 || decodedCount !== totalCharacters) {
+    throw new Error(
+      'El flujo de bits del archivo .suf está corrupto o no coincide con los caracteres declarados.',
+    );
   }
 
   const header: SufHeader = {

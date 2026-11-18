@@ -48,4 +48,27 @@ describe('suf-format (SUF1 binary serialization)', () => {
       /Archivo \.suf corrupto o demasiado pequeño/,
     );
   });
+
+  it('should throw an error for invalid paddingBits or truncated payload', () => {
+    const valid = writeSuf({
+      text: 'ab',
+      title: 'T',
+      frequencies: [
+        { symbol: 'a', frequency: 1 },
+        { symbol: 'b', frequency: 1 },
+      ],
+      codes: { a: '0', b: '1' },
+    });
+
+    const badPadding = Buffer.from(valid);
+    badPadding.writeUInt8(9, 8);
+    expect(() => readSuf(badPadding)).toThrow(/Bits de relleno inválidos/);
+
+    const truncated = valid.subarray(0, 15);
+    expect(() => readSuf(truncated)).toThrow(/corrupt[ao] o truncad[ao]/);
+
+    const wrongCount = Buffer.from(valid);
+    wrongCount.writeUInt32BE(99, 4);
+    expect(() => readSuf(wrongCount)).toThrow(/no coincide con los caracteres/);
+  });
 });
