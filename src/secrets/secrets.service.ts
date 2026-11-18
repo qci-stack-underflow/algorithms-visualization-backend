@@ -17,7 +17,6 @@ export class SecretsService {
 
   get RAPID_API_URL(): string {
     return this.configService.get<string>('RAPID_API_URL', 'none');
-  
   }
   get RAPID_API_HOST(): string {
     return this.configService.get<string>('RAPID_API_HOST', 'none');
