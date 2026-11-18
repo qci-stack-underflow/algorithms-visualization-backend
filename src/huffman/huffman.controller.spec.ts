@@ -291,18 +291,19 @@ describe('HuffmanController (B5, B6 & B7)', () => {
     const mockResults = [
       {
         type: 'gutenberg' as const,
-        id: 2000,
-        title: 'Don Quijote',
-        author: 'Cervantes',
-        language: 'Español',
+        id: 996,
+        title: 'Don Quixote',
+        author: 'Cervantes Saavedra, Miguel de',
+        language: 'Inglés',
         size: 'Desconocido',
       },
     ];
     rapidApiClient.searchBooks.mockResolvedValueOnce(mockResults);
 
-    const res = await controller.searchBook('quijote');
-    expect(rapidApiClient.searchBooks).toHaveBeenCalledWith('quijote');
-    expect(res).toEqual({ result: mockResults });
+    const res = await controller.searchBook('cervantes');
+    expect(rapidApiClient.searchBooks).toHaveBeenCalledWith('cervantes');
+    // Primero el Quijote del catálogo (2000), luego el de RapidAPI.
+    expect(res.result.map((book) => book.id)).toEqual([2000, 996]);
 
     await expect(controller.searchBook(undefined)).rejects.toThrow(
       BadRequestException,
@@ -314,7 +315,7 @@ describe('HuffmanController (B5, B6 & B7)', () => {
     rapidApiClient.searchBooks.mockRejectedValueOnce(
       new BadGatewayException('Fallo RapidAPI'),
     );
-    await expect(controller.searchBook('quijote')).rejects.toThrow(
+    await expect(controller.searchBook('zzzzqq')).rejects.toThrow(
       BadGatewayException,
     );
   });
