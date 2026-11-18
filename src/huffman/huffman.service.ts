@@ -9,6 +9,8 @@ import {
   HUFFMAN_PSEUDOCODE,
   HuffmanResult,
   MAX_UPLOAD_FILE_SIZE_BYTES,
+  SUF_MAGIC,
+  SufHeader,
   UserFileSourceInfo,
   VERCEL_MAX_PAYLOAD_BYTES,
 } from '../types/huffman.types';
@@ -264,6 +266,109 @@ export class HuffmanService {
       filename: sufFilename,
       result,
       sufBuffer,
+    };
+  }
+
+  /**
+   * Descomprime un archivo .suf subido por el cliente (puro o con prefijo de metadatos JSON).
+   *
+   * @param file Archivo subido vía multipart/form-data.
+   * @param hasMetadata Si es `true`, espera el formato combinado `[uint32 BE][JSON][.suf]`; si es `false` (por defecto), espera `.suf` puro (`SUF1`).
+   */
+  decompressUploadedFile(
+    file?: UploadedTextFile,
+    hasMetadata = false,
+  ): {
+    buffer: Buffer;
+    filename: string;
+    header: SufHeader;
+    decodedText: string;
+  } {
+    if (!file || !Buffer.isBuffer(file.buffer)) {
+      throw new BadRequestException(
+        'Debe adjuntar un archivo .suf válido en el campo "file".',
+      );
+    }
+
+    const originalname = file.originalname?.trim() || 'archive.suf';
+    const hasExtension = originalname.includes('.');
+    const hasSufExtension = originalname.toLowerCase().endsWith('.suf');
+
+    if (hasExtension && !hasSufExtension) {
+      throw new BadRequestException(
+        'Solo se aceptan archivos comprimidos con extensión .suf.',
+      );
+    }
+
+    const fileBytes = Math.max(file.buffer.byteLength, file.size ?? 0);
+    if (fileBytes > MAX_UPLOAD_FILE_SIZE_BYTES) {
+      throw new PayloadTooLargeException(
+        'El archivo supera el límite máximo permitido de 4 MB.',
+      );
+    }
+
+    let sufBuffer: Buffer;
+    if (hasMetadata) {
+      if (file.buffer.byteLength < 4) {
+        throw new BadRequestException(
+          'El archivo combinado con metadatos no tiene una cabecera JSON válida.',
+        );
+      }
+
+      const jsonLength = file.buffer.readUInt32BE(0);
+      if (jsonLength === 0 || 4 + jsonLength >= file.buffer.byteLength) {
+        throw new BadRequestException(
+          'El archivo combinado con metadatos no contiene un bloque .suf válido.',
+        );
+      }
+
+      try {
+        JSON.parse(file.buffer.subarray(4, 4 + jsonLength).toString('utf-8'));
+      } catch {
+        throw new BadRequestException(
+          'El bloque de metadatos JSON en el archivo es inválido.',
+        );
+      }
+
+      sufBuffer = file.buffer.subarray(4 + jsonLength);
+    } else {
+      if (
+        file.buffer.byteLength < 4 ||
+        file.buffer.subarray(0, 4).toString('ascii') !== SUF_MAGIC
+      ) {
+        throw new BadRequestException(
+          'El archivo no tiene el formato binario .suf (SUF1) esperado.',
+        );
+      }
+      sufBuffer = file.buffer;
+    }
+
+    let parsed: ReadSufResult;
+    try {
+      parsed = this.decompressBinary(sufBuffer);
+    } catch (error: unknown) {
+      const detail =
+        error instanceof Error ? error.message : 'Archivo .suf inválido.';
+      throw new BadRequestException(detail);
+    }
+
+    const decodedBuffer = Buffer.from(parsed.decodedText, 'utf-8');
+    if (decodedBuffer.byteLength > VERCEL_MAX_PAYLOAD_BYTES) {
+      throw new PayloadTooLargeException(
+        'El archivo de texto descomprimido excede el límite de 4.5 MB de Vercel.',
+      );
+    }
+
+    const baseName = originalname.replace(/\.suf$/i, '') || 'document';
+    const safeDispositionName =
+      baseName.replace(/[^a-zA-Z0-9._-]/g, '_') || 'document';
+    const txtFilename = `${safeDispositionName}.txt`;
+
+    return {
+      buffer: decodedBuffer,
+      filename: txtFilename,
+      header: parsed.header,
+      decodedText: parsed.decodedText,
     };
   }
 }

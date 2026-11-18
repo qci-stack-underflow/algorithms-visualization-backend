@@ -149,4 +149,28 @@ export class HuffmanController {
       length: buffer.byteLength,
     });
   }
+
+  @Post('decompress/file')
+  @HttpCode(HttpStatus.OK)
+  @Header('Content-Type', 'text/plain; charset=utf-8')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: MAX_UPLOAD_FILE_SIZE_BYTES },
+    }),
+  )
+  decompressFromClient(
+    @UploadedFile() file?: UploadedTextFile,
+    @Query('metadata') metadata?: string,
+  ): StreamableFile {
+    const hasMetadata = parseMetadataFlag(metadata, false);
+    const { buffer, filename } = this.huffmanService.decompressUploadedFile(
+      file,
+      hasMetadata,
+    );
+    return new StreamableFile(buffer, {
+      type: 'text/plain; charset=utf-8',
+      disposition: `attachment; filename="${filename}"`,
+      length: buffer.byteLength,
+    });
+  }
 }

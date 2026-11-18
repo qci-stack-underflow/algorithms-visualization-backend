@@ -329,4 +329,89 @@ describe('Huffman Endpoints (e2e - B8)', () => {
       })
       .expect(400);
   });
+
+  it('POST /huffman/decompress/file descomprime .suf puro (metadata=false por defecto) y combinado (metadata=true) a .txt', async () => {
+    const customText =
+      '  Prueba de ida y vuelta completo con emojis 🎉 y salto final.\n';
+
+    // 1. Comprimir sin metadata -> .suf puro
+    const rawSufRes = await request(app.getHttpServer())
+      .post('/huffman/compress/file?metadata=false')
+      .attach('file', Buffer.from(customText, 'utf-8'), {
+        filename: 'roundtrip.txt',
+        contentType: 'text/plain',
+      })
+      .buffer(true)
+      .parse((res, callback) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
+        res.on('end', () => callback(null, Buffer.concat(chunks)));
+      })
+      .expect(200);
+
+    // 2. Descomprimir con default (metadata=false)
+    const decodedPlainRes = await request(app.getHttpServer())
+      .post('/huffman/decompress/file')
+      .attach('file', rawSufRes.body as Buffer, {
+        filename: 'roundtrip.suf',
+        contentType: 'application/octet-stream',
+      })
+      .expect(200);
+
+    expect(decodedPlainRes.headers['content-type']).toContain('text/plain');
+    expect(decodedPlainRes.headers['content-disposition']).toContain(
+      'roundtrip.txt',
+    );
+    expect(decodedPlainRes.text).toBe(customText);
+
+    // 3. Comprimir con metadata=true -> [uint32][JSON][.suf]
+    const combinedRes = await request(app.getHttpServer())
+      .post('/huffman/compress/file?metadata=true')
+      .attach('file', Buffer.from(customText, 'utf-8'), {
+        filename: 'combined.txt',
+        contentType: 'text/plain',
+      })
+      .buffer(true)
+      .parse((res, callback) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
+        res.on('end', () => callback(null, Buffer.concat(chunks)));
+      })
+      .expect(200);
+
+    // 4. Descomprimir con metadata=true
+    const decodedCombinedRes = await request(app.getHttpServer())
+      .post('/huffman/decompress/file?metadata=true')
+      .attach('file', combinedRes.body as Buffer, {
+        filename: 'combined.suf',
+        contentType: 'application/octet-stream',
+      })
+      .expect(200);
+
+    expect(decodedCombinedRes.headers['content-disposition']).toContain(
+      'combined.txt',
+    );
+    expect(decodedCombinedRes.text).toBe(customText);
+
+    // 5. Errores 400: archivo faltante, .suf corrupto o metadata inválido
+    await request(app.getHttpServer())
+      .post('/huffman/decompress/file')
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .post('/huffman/decompress/file')
+      .attach('file', Buffer.from('NO_ES_SUF'), {
+        filename: 'corrupto.suf',
+        contentType: 'application/octet-stream',
+      })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .post('/huffman/decompress/file?metadata=invalid')
+      .attach('file', rawSufRes.body as Buffer, {
+        filename: 'roundtrip.suf',
+        contentType: 'application/octet-stream',
+      })
+      .expect(400);
+  });
 });

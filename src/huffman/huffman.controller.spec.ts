@@ -183,4 +183,87 @@ describe('HuffmanController (B5, B6 & B7)', () => {
       ),
     ).toThrow(BadRequestException);
   });
+
+  it('POST /huffman/decompress/file (por defecto metadata=false) descomprime .suf puro a .txt', async () => {
+    const sampleText = 'Contenido comprimido y recuperado.\n';
+    const compressedStream = controller.compressFromClient(
+      {
+        originalname: 'recuperar.txt',
+        mimetype: 'text/plain',
+        size: Buffer.byteLength(sampleText, 'utf-8'),
+        buffer: Buffer.from(sampleText, 'utf-8'),
+      },
+      'Recuperar',
+      'false',
+    );
+
+    const compressedChunks: Buffer[] = [];
+    for await (const chunk of compressedStream.getStream()) {
+      compressedChunks.push(chunk as Buffer);
+    }
+    const sufBuffer = Buffer.concat(compressedChunks);
+
+    const decompressedStream = controller.decompressFromClient({
+      originalname: 'recuperar.suf',
+      mimetype: 'application/octet-stream',
+      size: sufBuffer.byteLength,
+      buffer: sufBuffer,
+    });
+
+    const headers = decompressedStream.getHeaders();
+    expect(headers.type).toBe('text/plain; charset=utf-8');
+    expect(headers.disposition).toContain('recuperar.txt');
+
+    const decodedChunks: Buffer[] = [];
+    for await (const chunk of decompressedStream.getStream()) {
+      decodedChunks.push(chunk as Buffer);
+    }
+    expect(Buffer.concat(decodedChunks).toString('utf-8')).toBe(sampleText);
+  });
+
+  it('POST /huffman/decompress/file?metadata=true descomprime archivo combinado a .txt', async () => {
+    const sampleText = 'Archivo con metadata JSON adjunta.';
+    const compressedStream = controller.compressFromClient({
+      originalname: 'con-meta.txt',
+      mimetype: 'text/plain',
+      size: Buffer.byteLength(sampleText, 'utf-8'),
+      buffer: Buffer.from(sampleText, 'utf-8'),
+    });
+
+    const compressedChunks: Buffer[] = [];
+    for await (const chunk of compressedStream.getStream()) {
+      compressedChunks.push(chunk as Buffer);
+    }
+    const combinedBuffer = Buffer.concat(compressedChunks);
+
+    const decompressedStream = controller.decompressFromClient(
+      {
+        originalname: 'con-meta.suf',
+        mimetype: 'application/octet-stream',
+        size: combinedBuffer.byteLength,
+        buffer: combinedBuffer,
+      },
+      'true',
+    );
+
+    const decodedChunks: Buffer[] = [];
+    for await (const chunk of decompressedStream.getStream()) {
+      decodedChunks.push(chunk as Buffer);
+    }
+    expect(Buffer.concat(decodedChunks).toString('utf-8')).toBe(sampleText);
+  });
+
+  it('POST /huffman/decompress/file lanza 400 cuando metadata es inválido', () => {
+    expect(() =>
+      controller.decompressFromClient(
+        {
+          originalname: 'test.suf',
+          mimetype: 'application/octet-stream',
+          size: 4,
+          buffer: Buffer.from('SUF1'),
+        },
+        'otro',
+      ),
+    ).toThrow(BadRequestException);
+  });
 });

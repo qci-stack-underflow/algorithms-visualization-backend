@@ -225,4 +225,105 @@ describe('HuffmanService (B5 & B7)', () => {
       }),
     ).toThrow(PayloadTooLargeException);
   });
+
+  it('descomprime un archivo .suf puro (hasMetadata=false) y reconstruye el texto original', () => {
+    const rawText = '  Texto con saltos\ny emojis 🚀 para descomprimir!\n';
+    const compressed = service.compressUploadedFile(
+      {
+        originalname: 'entrada.txt',
+        mimetype: 'text/plain',
+        size: Buffer.byteLength(rawText, 'utf-8'),
+        buffer: Buffer.from(rawText, 'utf-8'),
+      },
+      'Entrada',
+      false,
+    );
+
+    const decoded = service.decompressUploadedFile({
+      originalname: 'entrada.suf',
+      mimetype: 'application/octet-stream',
+      size: compressed.buffer.byteLength,
+      buffer: compressed.buffer,
+    });
+
+    expect(decoded.filename).toBe('entrada.txt');
+    expect(decoded.decodedText).toBe(rawText);
+    expect(decoded.buffer.toString('utf-8')).toBe(rawText);
+  });
+
+  it('descomprime un archivo combinado [uint32][JSON][.suf] cuando hasMetadata=true', () => {
+    const rawText = 'Texto combinado con metadatos JSON.';
+    const compressed = service.compressUploadedFile(
+      {
+        originalname: 'combinado.txt',
+        mimetype: 'text/plain',
+        size: Buffer.byteLength(rawText, 'utf-8'),
+        buffer: Buffer.from(rawText, 'utf-8'),
+      },
+      'Combinado',
+      true,
+    );
+
+    const decoded = service.decompressUploadedFile(
+      {
+        originalname: 'combinado.suf',
+        mimetype: 'application/octet-stream',
+        size: compressed.buffer.byteLength,
+        buffer: compressed.buffer,
+      },
+      true,
+    );
+
+    expect(decoded.filename).toBe('combinado.txt');
+    expect(decoded.decodedText).toBe(rawText);
+  });
+
+  it('lanza 400 o 413 al descomprimir un archivo .suf inválido, corrupto o demasiado grande', () => {
+    expect(() => service.decompressUploadedFile(undefined)).toThrow(
+      BadRequestException,
+    );
+
+    expect(() =>
+      service.decompressUploadedFile({
+        originalname: 'texto.txt',
+        mimetype: 'text/plain',
+        size: 4,
+        buffer: Buffer.from('SUF1'),
+      }),
+    ).toThrow(BadRequestException);
+
+    expect(() =>
+      service.decompressUploadedFile({
+        originalname: 'malo.suf',
+        mimetype: 'application/octet-stream',
+        size: 12,
+        buffer: Buffer.from('NOT_A_SUF_FILE'),
+      }),
+    ).toThrow(BadRequestException);
+
+    expect(() =>
+      service.decompressUploadedFile(
+        {
+          originalname: 'mal-json.suf',
+          mimetype: 'application/octet-stream',
+          size: 12,
+          buffer: Buffer.concat([
+            Buffer.from([0, 0, 0, 4]),
+            Buffer.from('{bad'),
+            Buffer.from('SUF1'),
+          ]),
+        },
+        true,
+      ),
+    ).toThrow(BadRequestException);
+
+    expect(() =>
+      service.decompressUploadedFile({
+        originalname: 'grande.suf',
+        mimetype: 'application/octet-stream',
+        size: MAX_UPLOAD_FILE_SIZE_BYTES + 1,
+        buffer: Buffer.from('SUF1'),
+      }),
+    ).toThrow(PayloadTooLargeException);
+  });
 });
