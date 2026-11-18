@@ -202,8 +202,7 @@ export class HuffmanService {
     }
 
     const rawText = file.buffer.toString('utf-8');
-    const cleanedText = this.cleanText(rawText);
-    if (cleanedText.length === 0) {
+    if (rawText.length === 0) {
       throw new BadRequestException(
         'El archivo de texto proporcionado está vacío.',
       );
@@ -214,24 +213,24 @@ export class HuffmanService {
       customTitle && customTitle.trim().length > 0
         ? customTitle.trim()
         : baseName;
-    const cleanBytes = Buffer.byteLength(cleanedText, 'utf-8');
+    const rawBytes = Buffer.byteLength(rawText, 'utf-8');
     const formattedSize =
-      cleanBytes < 1024
-        ? `${cleanBytes} B`
-        : cleanBytes < 1024 * 1024
-          ? `${(cleanBytes / 1024).toFixed(1)} KB`
-          : `${(cleanBytes / (1024 * 1024)).toFixed(2)} MB`;
+      rawBytes < 1024
+        ? `${rawBytes} B`
+        : rawBytes < 1024 * 1024
+          ? `${(rawBytes / 1024).toFixed(1)} KB`
+          : `${(rawBytes / (1024 * 1024)).toFixed(2)} MB`;
 
     const source: UserFileSourceInfo = {
       type: 'upload',
       filename: hasTxtExtension ? originalname : `${originalname}.txt`,
       title,
       size: formattedSize,
-      bytes: cleanBytes,
+      bytes: rawBytes,
       mimeType: 'text/plain',
     };
 
-    const { result, sufBuffer } = this.compress(cleanedText, {
+    const { result, sufBuffer } = this.compress(rawText, {
       source,
       title,
       clean: false,
@@ -241,11 +240,7 @@ export class HuffmanService {
     const lengthPrefix = Buffer.alloc(4);
     lengthPrefix.writeUInt32BE(jsonBuffer.byteLength, 0);
 
-    const combinedBuffer = Buffer.concat([
-      lengthPrefix,
-      jsonBuffer,
-      sufBuffer,
-    ]);
+    const combinedBuffer = Buffer.concat([lengthPrefix, jsonBuffer, sufBuffer]);
 
     if (combinedBuffer.byteLength > VERCEL_MAX_PAYLOAD_BYTES) {
       throw new PayloadTooLargeException(

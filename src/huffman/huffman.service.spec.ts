@@ -125,7 +125,8 @@ describe('HuffmanService (B5 & B7)', () => {
   });
 
   it('procesa un archivo .txt subido por el cliente y genera el binario combinado [uint32][JSON][.suf]', () => {
-    const text = 'En un lugar de la Mancha, de cuyo nombre no quiero acordarme.';
+    const text =
+      'En un lugar de la Mancha, de cuyo nombre no quiero acordarme.';
     const output = service.compressUploadedFile(
       {
         originalname: 'mi-quijote.txt',
@@ -157,6 +158,20 @@ describe('HuffmanService (B5 & B7)', () => {
     expect(decompressed.decodedText).toBe(text);
   });
 
+  it('preserva saltos de línea y espacios iniciales/finales al comprimir un archivo subido', () => {
+    const rawText = '  hola mundo\r\n';
+    const output = service.compressUploadedFile({
+      originalname: 'con-espacios.txt',
+      mimetype: 'text/plain',
+      size: Buffer.byteLength(rawText, 'utf-8'),
+      buffer: Buffer.from(rawText, 'utf-8'),
+    });
+
+    const decompressed = service.decompressBinary(output.sufBuffer);
+    expect(decompressed.decodedText).toBe(rawText);
+    expect(output.result.totalCharacters).toBe(rawText.length);
+  });
+
   it('lanza 400 o 413 cuando el archivo subido es inválido, vacío o supera los 4 MB', () => {
     expect(() => service.compressUploadedFile(undefined)).toThrow(
       BadRequestException,
@@ -176,7 +191,7 @@ describe('HuffmanService (B5 & B7)', () => {
         originalname: 'vacio.txt',
         mimetype: 'text/plain',
         size: 0,
-        buffer: Buffer.from('   \r\n  '),
+        buffer: Buffer.from(''),
       }),
     ).toThrow(BadRequestException);
 
