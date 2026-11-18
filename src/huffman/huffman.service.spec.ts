@@ -488,6 +488,33 @@ describe('HuffmanService (B5 & B7)', () => {
     ).toEqual([84]);
   });
 
+  it('coincide por inicio de palabra, no en medio de ella', async () => {
+    rapidApiClient.searchBooks.mockResolvedValue([
+      libroRemoto(
+        84,
+        'Frankenstein; or, The modern Prometheus',
+        'Shelley, Mary',
+      ),
+      libroRemoto(2701, 'Moby Dick; Or, The Whale', 'Melville, Herman'),
+      libroRemoto(
+        17013,
+        'El sombrero de tres picos',
+        'Alarcón, Pedro Antonio de',
+      ),
+    ]);
+
+    // "el" no encuentra Shelley ni Melville, sí «El sombrero de tres picos».
+    expect(
+      (await service.searchBooks('el ')).result.map((book) => book.id),
+    ).toEqual([17013]);
+    expect(
+      (await service.searchBooks('quij')).result.map((book) => book.id),
+    ).toEqual([2000]);
+    expect(
+      (await service.searchBooks('shel')).result.map((book) => book.id),
+    ).toEqual([84]);
+  });
+
   it('sin RapidAPI, responde los libros del catálogo que coinciden', async () => {
     rapidApiClient.searchBooks.mockRejectedValueOnce(
       new BadGatewayException('Error en RapidAPI'),
