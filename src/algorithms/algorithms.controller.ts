@@ -16,14 +16,36 @@ import {
   type AlgorithmInfo,
 } from '../types/algorithm.types';
 
+const MAX_INPUT_LENGTH = 50;
+
+const isAlgorithm = (id: unknown): id is AlgorithmId =>
+  typeof id === 'string' && ALGORITHM_IDS.includes(id as AlgorithmId);
+
+// El cuerpo llega sin tipo: se lee como un objeto de claves desconocidas.
+const asRecord = (body: unknown): Record<string, unknown> | null =>
+  typeof body === 'object' && body !== null
+    ? (body as Record<string, unknown>)
+    : null;
+
+const isNumberArray = (value: unknown): value is number[] =>
+  Array.isArray(value) &&
+  value.length > 0 &&
+  value.every((n) => typeof n === 'number' && Number.isFinite(n));
+
+// Los errores del servicio llevan el motivo en `cause` (ver algorithms.service.ts).
+const causeOf = (error: unknown): unknown =>
+  error instanceof Error ? error.cause : undefined;
+
+function checkInputLength(input: number[]): void {
+  if (input.length > MAX_INPUT_LENGTH)
+    throw new BadRequestException(
+      `Array input is too big (up to ${MAX_INPUT_LENGTH}, sent ${input.length})`,
+    );
+}
+
 @Controller('algorithms')
 export class AlgorithmsController {
-  private readonly isAlgorithm: Function;
-
-  constructor(private readonly algorithmsService: AlgorithmsService) {
-    this.isAlgorithm = (id: string) =>
-      ALGORITHM_IDS.includes(id as AlgorithmId);
-  }
+  constructor(private readonly algorithmsService: AlgorithmsService) {}
 
   @Get('/')
   findAll(): AlgorithmInfo[] {
@@ -36,86 +58,79 @@ export class AlgorithmsController {
 
   @Get('/:id')
   findOne(@Param('id') id: string): AlgorithmInfo {
-    if (!this.isAlgorithm(id))
+    if (!isAlgorithm(id))
       throw new NotFoundException(`Algorithm with id '${id}' does not exist.`);
 
     try {
       return this.algorithmsService.findOne(id);
-    } catch (e: any) {
+    } catch {
       throw new InternalServerErrorException('Something went wrong.');
     }
   }
 
   @Post('/:id/run')
   executeAlgorithm(
-    @Body() body: any,
+    @Body() rawBody: unknown,
     @Param('id') id: string,
   ): AlgorithmResult {
-    if (!this.isAlgorithm(id))
+    if (!isAlgorithm(id))
       throw new NotFoundException(`Algorithm with id '${id}' does not exist.`);
 
+    const body = asRecord(rawBody);
     if (!body) throw new BadRequestException('Missing body');
 
-    if (body['input'] === undefined)
+    const input = body['input'];
+    if (input === undefined)
       throw new BadRequestException('Array input is missing');
 
-    if (
-      !Array.isArray(body['input']) ||
-      body['input'].length <= 0 ||
-      body['input'].some((n) => typeof n !== 'number' || !Number.isFinite(n))
-    )
+    if (!isNumberArray(input))
       throw new BadRequestException('Array input is bad-formatted');
 
-    if (body['input'].length > 50)
-      throw new BadRequestException(
-        `Array input is too big (up to 50, sent ${body['input'].length})`,
-      );
+    checkInputLength(input);
+
     try {
-      return this.algorithmsService.run(id, body['input']);
-    } catch (e: any) {
-      if (e['cause'] === 'bad-array')
+      return this.algorithmsService.run(id, input);
+    } catch (error: unknown) {
+      if (causeOf(error) === 'bad-array')
         throw new BadRequestException('Array input is bad-formatted');
-      else throw new InternalServerErrorException('Something went wrong');
+      throw new InternalServerErrorException('Something went wrong');
     }
   }
 
   @Post('/compare')
-  compareAlgorithms(@Body() body: any): AlgorithmResult[] {
+  compareAlgorithms(@Body() rawBody: unknown): AlgorithmResult[] {
+    const body = asRecord(rawBody);
     if (!body) throw new BadRequestException('Missing body.');
 
-    if (body['algorithms'] === undefined || body['input'] === undefined)
+    const algorithms = body['algorithms'];
+    const input = body['input'];
+    if (algorithms === undefined || input === undefined)
       throw new BadRequestException('Algorithms or input are missing.');
 
-    if (!Array.isArray(body['algorithms']) || body['algorithms'].length < 2)
+    if (!Array.isArray(algorithms) || algorithms.length < 2)
       throw new BadRequestException(
         'Algorithms are bad-formatted or there are less than 2',
       );
 
-    if (body['algorithms'].some((id) => !this.isAlgorithm(id)))
+    if (algorithms.some((algorithmId) => !isAlgorithm(algorithmId)))
       throw new NotFoundException(
         'There are one or more invalid algorithm ids',
       );
 
-    if (
-      !Array.isArray(body['input']) ||
-      body['input'].length <= 0 ||
-      body['input'].some((n) => typeof n !== 'number' || !Number.isFinite(n))
-    )
+    if (!isNumberArray(input))
       throw new BadRequestException('input is bad-formatted');
 
-    if (body['input'].length > 50)
-      throw new BadRequestException(
-        `Array input is too big (up to 50, sent ${body['input'].length})`,
-      );
+    checkInputLength(input);
 
     try {
-      return this.algorithmsService.compare(body['algorithms'], body['input']);
-    } catch (e: any) {
-      if (e['cause'] == 'bad-ids')
+      return this.algorithmsService.compare(algorithms, input);
+    } catch (error: unknown) {
+      const cause = causeOf(error);
+      if (cause === 'bad-ids')
         throw new BadRequestException('input is bad-formatted');
-      else if (e['cause'] == 'algorithms-repeat')
+      if (cause === 'algorithms-repeat')
         throw new BadRequestException('There are repeated algorithms');
-      else throw new InternalServerErrorException('Something went wrong.');
+      throw new InternalServerErrorException('Something went wrong.');
     }
   }
 }

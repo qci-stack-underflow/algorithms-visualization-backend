@@ -109,7 +109,7 @@ describe('AlgorithmsController', () => {
 
     it('should map bad-array service errors to a bad request', () => {
       mockAlgorithmsService.run.mockImplementation(() => {
-        throw { cause: 'bad-array' };
+        throw new Error('service error', { cause: 'bad-array' });
       });
 
       expect(() =>
@@ -178,7 +178,7 @@ describe('AlgorithmsController', () => {
 
     it('should map repeated algorithms service errors to a bad request', () => {
       mockAlgorithmsService.compare.mockImplementation(() => {
-        throw { cause: 'algorithms-repeat' };
+        throw new Error('service error', { cause: 'algorithms-repeat' });
       });
 
       expect(() => controller.compareAlgorithms(validBody)).toThrow(
@@ -188,7 +188,7 @@ describe('AlgorithmsController', () => {
 
     it('should map bad-ids service errors to a bad request', () => {
       mockAlgorithmsService.compare.mockImplementation(() => {
-        throw { cause: 'bad-ids' };
+        throw new Error('service error', { cause: 'bad-ids' });
       });
 
       expect(() => controller.compareAlgorithms(validBody)).toThrow(
