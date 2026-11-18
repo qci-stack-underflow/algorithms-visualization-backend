@@ -92,11 +92,11 @@ describe('HuffmanController (B5, B6 & B7)', () => {
 
   it('añade cabeceras Cache-Control en los endpoints GET para aprovechar la caché de Vercel (B7)', () => {
     const methods = [
-      HuffmanController.prototype.getDefaultBooks,
-      HuffmanController.prototype.searchBook,
-      HuffmanController.prototype.compressByIdMetadata,
-      HuffmanController.prototype.compressByIdDownload,
-    ];
+      'getDefaultBooks',
+      'searchBook',
+      'compressByIdMetadata',
+      'compressByIdDownload',
+    ] as const;
 
     for (const name of methods) {
       const handler = Object.getOwnPropertyDescriptor(
