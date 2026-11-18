@@ -1,4 +1,5 @@
 import {
+  BadGatewayException,
   GatewayTimeoutException,
   INestApplication,
   PayloadTooLargeException,
@@ -9,6 +10,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { BOOKS_CATALOG } from '../src/books/books.catalog';
 import { GutenbergClient } from '../src/books/gutenberg.client';
+import { RapidApiGutenbergClient } from '../src/books/rapidapi-gutenberg.client';
 import { readSuf } from '../src/huffman/utils/suf-format';
 import {
   HuffmanNode,
@@ -57,6 +59,7 @@ function decodeBitstreamWithJsonTree(
 describe('Huffman Endpoints (e2e - B8)', () => {
   let app: INestApplication<App>;
   let fetchBookTextMock: jest.Mock;
+  let searchBooksMock: jest.Mock;
 
   const sampleGutenbergBook = [
     '\uFEFFThe Project Gutenberg eBook of Don Quijote',
@@ -69,6 +72,7 @@ describe('Huffman Endpoints (e2e - B8)', () => {
 
   beforeEach(async () => {
     fetchBookTextMock = jest.fn().mockResolvedValue(sampleGutenbergBook);
+    searchBooksMock = jest.fn().mockResolvedValue([]);
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -76,6 +80,10 @@ describe('Huffman Endpoints (e2e - B8)', () => {
       .overrideProvider(GutenbergClient)
       .useValue({
         fetchBookText: fetchBookTextMock,
+      })
+      .overrideProvider(RapidApiGutenbergClient)
+      .useValue({
+        searchBooks: searchBooksMock,
       })
       .compile();
 
@@ -413,5 +421,47 @@ describe('Huffman Endpoints (e2e - B8)', () => {
         contentType: 'application/octet-stream',
       })
       .expect(400);
+  });
+
+  it('GET /huffman/books/search devuelve resultados de RapidAPI con Cache-Control y valida errores 400 y 502 (#60)', async () => {
+    const mockResults = [
+      {
+        type: 'gutenberg',
+        id: 2000,
+        title: 'Don Quijote',
+        author: 'Cervantes Saavedra, Miguel de',
+        language: 'Español',
+        size: 'Desconocido',
+      },
+    ];
+    searchBooksMock.mockResolvedValueOnce(mockResults);
+
+    const okRes = await request(app.getHttpServer())
+      .get('/huffman/books/search?q=quijote')
+      .expect(200);
+
+    expect(okRes.headers['cache-control']).toContain('s-maxage=604800');
+    expect(searchBooksMock).toHaveBeenCalledWith('quijote');
+    expect(okRes.body).toEqual({ result: mockResults });
+
+    // 400: q ausente o vacío
+    await request(app.getHttpServer()).get('/huffman/books/search').expect(400);
+
+    await request(app.getHttpServer())
+      .get('/huffman/books/search?q=%20%20')
+      .expect(400);
+
+    // 502: fallo en RapidAPI
+    searchBooksMock.mockRejectedValueOnce(
+      new BadGatewayException('Error al consultar RapidAPI.'),
+    );
+    const res502 = await request(app.getHttpServer())
+      .get('/huffman/books/search?q=cervantes')
+      .expect(502);
+
+    expect(res502.body).toMatchObject({
+      statusCode: 502,
+      error: 'Bad Gateway',
+    });
   });
 });

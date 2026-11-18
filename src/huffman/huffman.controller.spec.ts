@@ -1,4 +1,5 @@
 import {
+  BadGatewayException,
   BadRequestException,
   NotFoundException,
   StreamableFile,
@@ -16,8 +17,13 @@ import { HuffmanService } from './huffman.service';
 describe('HuffmanController (B5, B6 & B7)', () => {
   let controller: HuffmanController;
   let gutenbergClient: GutenbergClient;
+  let rapidApiClient: { searchBooks: jest.Mock };
 
   beforeEach(async () => {
+    rapidApiClient = {
+      searchBooks: jest.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [HuffmanController],
       providers: [
@@ -38,7 +44,7 @@ describe('HuffmanController (B5, B6 & B7)', () => {
         },
         {
           provide: RapidApiGutenbergClient,
-          useValue: { searchBooks: jest.fn().mockResolvedValue([]) },
+          useValue: rapidApiClient,
         },
       ],
     }).compile();
@@ -84,9 +90,10 @@ describe('HuffmanController (B5, B6 & B7)', () => {
     expect(fullBuffer.byteLength).toBeLessThan(VERCEL_MAX_PAYLOAD_BYTES);
   });
 
-  it('añade cabeceras Cache-Control en los 3 endpoints para aprovechar la caché de Vercel (B7)', () => {
+  it('añade cabeceras Cache-Control en los endpoints GET para aprovechar la caché de Vercel (B7)', () => {
     const methods = [
       HuffmanController.prototype.getDefaultBooks,
+      HuffmanController.prototype.searchBook,
       HuffmanController.prototype.compressByIdMetadata,
       HuffmanController.prototype.compressByIdDownload,
     ];
@@ -270,5 +277,37 @@ describe('HuffmanController (B5, B6 & B7)', () => {
         'otro',
       ),
     ).toThrow(BadRequestException);
+  });
+
+  it('GET /huffman/books/search devuelve { result: BookInfo[] } y valida q / errores externos', async () => {
+    const mockResults = [
+      {
+        type: 'gutenberg' as const,
+        id: 2000,
+        title: 'Don Quijote',
+        author: 'Cervantes',
+        language: 'Español',
+        size: 'Desconocido',
+      },
+    ];
+    rapidApiClient.searchBooks.mockResolvedValueOnce(mockResults);
+
+    const res = await controller.searchBook('quijote');
+    expect(rapidApiClient.searchBooks).toHaveBeenCalledWith('quijote');
+    expect(res).toEqual({ result: mockResults });
+
+    await expect(controller.searchBook(undefined)).rejects.toThrow(
+      BadRequestException,
+    );
+    await expect(controller.searchBook('   ')).rejects.toThrow(
+      BadRequestException,
+    );
+
+    rapidApiClient.searchBooks.mockRejectedValueOnce(
+      new BadGatewayException('Fallo RapidAPI'),
+    );
+    await expect(controller.searchBook('quijote')).rejects.toThrow(
+      BadGatewayException,
+    );
   });
 });
