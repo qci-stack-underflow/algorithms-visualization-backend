@@ -3,7 +3,7 @@ import {
   SufDictionaryEntry,
   SufHeader,
 } from '../../types/huffman.types';
-import { packBits, unpackBits } from './bit-packer';
+import { packBits } from './bit-packer';
 
 export interface WriteSufOptions {
   text: string;
@@ -16,6 +16,26 @@ export interface ReadSufResult {
   header: SufHeader;
   decodedText: string;
 }
+
+export interface ReadSufOptions {
+  /**
+   * Máximo de caracteres que se aceptan. Se revisa con la cabecera, antes de
+   * decodificar: un .suf pequeño puede declarar millones de caracteres (un
+   * bit por carácter) y agotar la memoria si se decodifica sin límite.
+   */
+  maxCharacters?: number;
+}
+
+// Nodo del árbol de decodificación que se reconstruye con los códigos.
+interface NodoDecodificacion {
+  hijos: [NodoDecodificacion | null, NodoDecodificacion | null];
+  simbolo: string | null;
+}
+
+const nuevoNodo = (): NodoDecodificacion => ({
+  hijos: [null, null],
+  simbolo: null,
+});
 
 /**
  * Serializa texto comprimido en el formato binario propietario .suf (SUF1).
@@ -53,6 +73,11 @@ export function writeSuf(options: WriteSufOptions): Buffer {
 
   // 2. Construir cabecera
   const titleBuffer = Buffer.from(title, 'utf-8');
+  if (titleBuffer.length > 0xffff) {
+    throw new RangeError(
+      'El título del .suf no puede ocupar más de 65,535 bytes en UTF-8.',
+    );
+  }
   const magicBuffer = Buffer.from(SUF_MAGIC, 'ascii');
 
   let headerSize =
@@ -145,7 +170,10 @@ export function writeSuf(options: WriteSufOptions): Buffer {
 /**
  * Lee y decodifica un archivo binario .suf (SUF1), reconstruyendo el texto original.
  */
-export function readSuf(buffer: Buffer): ReadSufResult {
+export function readSuf(
+  buffer: Buffer,
+  options: ReadSufOptions = {},
+): ReadSufResult {
   let offset = 0;
 
   if (buffer.length < 13) {
@@ -194,9 +222,17 @@ export function readSuf(buffer: Buffer): ReadSufResult {
   const title = buffer.toString('utf-8', offset, offset + titleLength);
   offset += titleLength;
 
+  const { maxCharacters } = options;
+  if (maxCharacters !== undefined && totalCharacters > maxCharacters) {
+    throw new Error(
+      `El archivo .suf declara ${totalCharacters} caracteres y el máximo es ${maxCharacters}.`,
+    );
+  }
+
   // 6. Diccionario
   const dictionary: SufDictionaryEntry[] = [];
-  const codeToSymbolMap = new Map<string, string>();
+  const raiz = nuevoNodo();
+  let sumaDeFrecuencias = 0;
 
   for (let i = 0; i < symbolCount; i += 1) {
     if (offset + 1 > buffer.length) {
@@ -235,34 +271,80 @@ export function readSuf(buffer: Buffer): ReadSufResult {
       );
     }
 
+    // Se agrega el código al árbol. Si pasa por una hoja o termina en un
+    // nodo que ya existe, los códigos no son prefijo y no se puede decodificar.
+    let nodo = raiz;
+    for (const bit of code) {
+      if (nodo.simbolo !== null) break;
+      const lado = bit === '1' ? 1 : 0;
+      nodo.hijos[lado] ??= nuevoNodo();
+      nodo = nodo.hijos[lado];
+    }
+    if (nodo.simbolo !== null || nodo.hijos[0] || nodo.hijos[1]) {
+      throw new Error(
+        `El código "${code}" del diccionario .suf no es un código prefijo.`,
+      );
+    }
+    nodo.simbolo = symbol;
+
+    sumaDeFrecuencias += frequency;
     dictionary.push({ symbol, frequency, codeLength, code });
-    codeToSymbolMap.set(code, symbol);
+  }
+
+  if (sumaDeFrecuencias !== totalCharacters) {
+    throw new Error(
+      'El diccionario del archivo .suf no coincide con los caracteres declarados.',
+    );
   }
 
   // 7. Cuerpo de datos comprimidos
   const compressedBytes = buffer.subarray(offset);
-  const bitString = unpackBits(new Uint8Array(compressedBytes), paddingBits);
-
-  // Decodificación prefijo
-  let decodedText = '';
-  let currentBits = '';
-  let decodedCount = 0;
-
-  for (const bit of bitString) {
-    currentBits += bit;
-    const matchedSymbol = codeToSymbolMap.get(currentBits);
-    if (matchedSymbol !== undefined) {
-      decodedText += matchedSymbol;
-      decodedCount += 1;
-      currentBits = '';
-    }
-  }
-
-  if (currentBits.length > 0 || decodedCount !== totalCharacters) {
+  const bitsDisponibles = compressedBytes.length * 8 - paddingBits;
+  // Cada carácter usa al menos un bit: si declara más caracteres que bits,
+  // el archivo está alterado (y no hace falta recorrerlo para saberlo).
+  if (bitsDisponibles < totalCharacters) {
     throw new Error(
       'El flujo de bits del archivo .suf está corrupto o no coincide con los caracteres declarados.',
     );
   }
+
+  // Decodificación prefijo: se baja por el árbol bit a bit (0 izquierda,
+  // 1 derecha) y al llegar a una hoja se escribe su símbolo.
+  const simbolos: string[] = new Array<string>(totalCharacters);
+  let decodedCount = 0;
+  let nodo = raiz;
+  let bitsLeidos = 0;
+
+  for (
+    let i = 0;
+    i < compressedBytes.length && bitsLeidos < bitsDisponibles;
+    i += 1
+  ) {
+    const byte = compressedBytes[i];
+    for (let b = 7; b >= 0 && bitsLeidos < bitsDisponibles; b -= 1) {
+      const siguiente = nodo.hijos[(byte >> b) & 1];
+      bitsLeidos += 1;
+      if (siguiente === null || decodedCount === totalCharacters) {
+        throw new Error(
+          'El flujo de bits del archivo .suf está corrupto o no coincide con los caracteres declarados.',
+        );
+      }
+      if (siguiente.simbolo !== null) {
+        simbolos[decodedCount] = siguiente.simbolo;
+        decodedCount += 1;
+        nodo = raiz;
+      } else {
+        nodo = siguiente;
+      }
+    }
+  }
+
+  if (nodo !== raiz || decodedCount !== totalCharacters) {
+    throw new Error(
+      'El flujo de bits del archivo .suf está corrupto o no coincide con los caracteres declarados.',
+    );
+  }
+  const decodedText = simbolos.join('');
 
   const header: SufHeader = {
     magic,

@@ -396,5 +396,7 @@ export const VERCEL_MAX_PAYLOAD_BYTES = 4.5 * 1024 * 1024; // 4.5 MB
 export const GUTENBERG_REQUEST_TIMEOUT_MS = 10_000;
 
 /** IDs de los libros oficiales acordados en el catálogo de Project Gutenberg. */
-export const CATALOG_BOOK_IDS = [2000, 1342, 2701, 84, 1661, 11] as const;
+export const CATALOG_BOOK_IDS = [
+  2000, 84, 18005, 1342, 2701, 1661, 11,
+] as const;
 export type CatalogBookId = (typeof CATALOG_BOOK_IDS)[number];

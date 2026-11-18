@@ -10,6 +10,9 @@ export interface CatalogBook extends BookInfo {
   readonly sizeBytes: number;
 }
 
+// Los tres primeros libros tienen copia completa en assets/catalog-backup/,
+// así que se pueden comprimir aunque Project Gutenberg no responda (desde
+// Vercel suele contestar 503). Los demás solo se descargan en línea.
 export const BOOKS_CATALOG: readonly CatalogBook[] = [
   {
     type: 'gutenberg',
@@ -17,9 +20,29 @@ export const BOOKS_CATALOG: readonly CatalogBook[] = [
     title: 'Don Quijote',
     author: 'Miguel de Cervantes Saavedra',
     language: 'Español',
-    size: '2.2 MB',
-    bytes: 2168320,
-    sizeBytes: 2168320,
+    size: '2.1 MB',
+    bytes: 2225777,
+    sizeBytes: 2225777,
+  },
+  {
+    type: 'gutenberg',
+    id: 84,
+    title: 'Frankenstein; Or, The Modern Prometheus',
+    author: 'Mary Wollstonecraft Shelley',
+    language: 'Inglés',
+    size: '438 KB',
+    bytes: 448885,
+    sizeBytes: 448885,
+  },
+  {
+    type: 'gutenberg',
+    id: 18005,
+    title: 'Los pazos de Ulloa',
+    author: 'Emilia Pardo Bazán',
+    language: 'Español',
+    size: '523 KB',
+    bytes: 535176,
+    sizeBytes: 535176,
   },
   {
     type: 'gutenberg',
@@ -40,16 +63,6 @@ export const BOOKS_CATALOG: readonly CatalogBook[] = [
     size: '1.2 MB',
     bytes: 1276235,
     sizeBytes: 1276235,
-  },
-  {
-    type: 'gutenberg',
-    id: 84,
-    title: 'Frankenstein; Or, The Modern Prometheus',
-    author: 'Mary Wollstonecraft Shelley',
-    language: 'Inglés',
-    size: '440 KB',
-    bytes: 448821,
-    sizeBytes: 448821,
   },
   {
     type: 'gutenberg',

@@ -1,8 +1,6 @@
 import {
   BadRequestException,
-  GatewayTimeoutException,
   Injectable,
-  NotFoundException,
   PayloadTooLargeException,
 } from '@nestjs/common';
 import {
@@ -21,7 +19,7 @@ import {
   CompressOptions,
   HuffmanCompressionOutput,
 } from './definitions/huffman-compressor';
-import { readSuf, ReadSufResult } from './utils/suf-format';
+import { readSuf, ReadSufOptions, ReadSufResult } from './utils/suf-format';
 import {
   BOOKS_CATALOG,
   CatalogBook,
@@ -36,6 +34,45 @@ export interface UploadedTextFile {
   mimetype?: string;
   size?: number;
   buffer?: Buffer;
+}
+
+// Título máximo de un archivo subido, en caracteres.
+export const MAX_TITLE_CHARACTERS = 200;
+
+const formatBytes = (bytes: number): string =>
+  bytes < 1024
+    ? `${bytes} B`
+    : bytes < 1024 * 1024
+      ? `${(bytes / 1024).toFixed(0)} KB`
+      : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+
+// Gutenberg pone "Title:", "Author:" y "Language:" en la cabecera de cada
+// libro; con eso se describe un libro que no está en el catálogo.
+function describeGutenbergBook(id: number, rawText: string): CatalogBook {
+  const cabecera = rawText.slice(0, 5000);
+  const campo = (nombre: string): string | undefined =>
+    new RegExp(`^${nombre}:[ \\t]*(.+)$`, 'mi').exec(cabecera)?.[1]?.trim();
+  const idiomas: Record<string, string> = {
+    english: 'Inglés',
+    spanish: 'Español',
+    french: 'Francés',
+    german: 'Alemán',
+    italian: 'Italiano',
+    portuguese: 'Portugués',
+  };
+  const idioma = campo('Language');
+  const bytes = Buffer.byteLength(rawText, 'utf-8');
+  return {
+    type: 'gutenberg',
+    id,
+    title: campo('Title') ?? `Libro ${id} de Project Gutenberg`,
+    author: campo('Author') ?? 'Autor desconocido',
+    language:
+      (idioma && idiomas[idioma.toLowerCase()]) ?? idioma ?? 'Desconocido',
+    size: formatBytes(bytes),
+    bytes,
+    sizeBytes: bytes,
+  };
 }
 
 @Injectable()
@@ -87,8 +124,8 @@ export class HuffmanService {
   /**
    * Descomprime un buffer en formato .suf (SUF1), devolviendo su cabecera y el texto original recuperado.
    */
-  decompressBinary(sufBuffer: Buffer): ReadSufResult {
-    return readSuf(sufBuffer);
+  decompressBinary(sufBuffer: Buffer, options?: ReadSufOptions): ReadSufResult {
+    return readSuf(sufBuffer, options);
   }
 
   /**
@@ -118,33 +155,28 @@ export class HuffmanService {
   async getBookText(
     bookId: number,
   ): Promise<{ text: string; book: CatalogBook }> {
-    const book = findCatalogBookById(bookId);
-    if (!book) {
-      throw new NotFoundException(
-        `El libro con id ${bookId} no se encuentra en el catálogo.`,
-      );
-    }
+    const catalogBook = findCatalogBookById(bookId);
 
     let rawText: string;
     try {
-      rawText = await this.gutenbergClient.fetchBookText(book.id);
+      rawText = await this.gutenbergClient.fetchBookText(bookId);
     } catch (error: unknown) {
       if (
         error instanceof PayloadTooLargeException ||
-        error instanceof GatewayTimeoutException ||
-        error instanceof NotFoundException
+        !this.localBackup.hasLocalCopy(bookId)
       ) {
         throw error;
       }
-
-      if (this.localBackup.hasLocalCopy(book.id)) {
-        rawText = this.localBackup.getLocalCopy(book.id);
-      } else {
-        throw error;
-      }
+      rawText = this.localBackup.getLocalCopy(bookId);
     }
 
+    const book = catalogBook ?? describeGutenbergBook(bookId, rawText);
     const cleanedText = this.cleanText(rawText);
+    if (cleanedText.length === 0) {
+      throw new BadRequestException(
+        `El libro ${bookId} de Project Gutenberg no tiene texto para comprimir.`,
+      );
+    }
     return { text: cleanedText, book };
   }
 
@@ -227,10 +259,15 @@ export class HuffmanService {
     }
 
     const baseName = originalname.replace(/\.txt$/i, '') || 'document';
-    const title =
-      customTitle && customTitle.trim().length > 0
+    // El .suf guarda el largo del título en 2 bytes: sin recortarlo, un título
+    // de más de 65,535 bytes rompía la escritura con un error 500.
+    const title = [
+      ...(customTitle && customTitle.trim().length > 0
         ? customTitle.trim()
-        : baseName;
+        : baseName),
+    ]
+      .slice(0, MAX_TITLE_CHARACTERS)
+      .join('');
     const rawBytes = Buffer.byteLength(rawText, 'utf-8');
     const formattedSize =
       rawBytes < 1024
@@ -360,7 +397,13 @@ export class HuffmanService {
 
     let parsed: ReadSufResult;
     try {
-      parsed = this.decompressBinary(sufBuffer);
+      // Cada carácter ocupa al menos un byte en UTF-8: con más caracteres que
+      // el límite de Vercel la respuesta no cabría. Se rechaza con la
+      // cabecera, antes de decodificar (un .suf de 4 MB puede declarar 33
+      // millones de caracteres y agotar la memoria de la función).
+      parsed = this.decompressBinary(sufBuffer, {
+        maxCharacters: VERCEL_MAX_PAYLOAD_BYTES,
+      });
     } catch (error: unknown) {
       const detail =
         error instanceof Error ? error.message : 'Archivo .suf inválido.';

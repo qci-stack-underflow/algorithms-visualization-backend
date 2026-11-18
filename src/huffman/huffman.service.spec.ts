@@ -1,6 +1,7 @@
 import {
   BadGatewayException,
   BadRequestException,
+  GatewayTimeoutException,
   NotFoundException,
   PayloadTooLargeException,
 } from '@nestjs/common';
@@ -59,14 +60,32 @@ describe('HuffmanService (B5 & B7)', () => {
     );
   });
 
-  it('usa el respaldo local (B4) si Gutenberg bloquea la petición', async () => {
-    gutenbergClient.fetchBookText.mockRejectedValueOnce(
-      new BadRequestException('Gutenberg IP blocked'),
-    );
+  it.each([
+    ['503 de Gutenberg', new BadGatewayException('HTTP 503')],
+    ['tiempo de espera', new GatewayTimeoutException('Timeout')],
+    ['petición rechazada', new BadRequestException('Gutenberg IP blocked')],
+  ])(
+    'usa el libro completo del respaldo local (B4) ante un %s',
+    async (_motivo, error) => {
+      gutenbergClient.fetchBookText.mockRejectedValueOnce(error);
 
-    const result = await service.processHuffmanMetadata(2000);
-    expect(result.source.id).toBe(2000);
-    expect(result.totalCharacters).toBeGreaterThan(50);
+      const result = await service.processHuffmanMetadata(2000);
+      expect(result.source.id).toBe(2000);
+      // El respaldo es el libro completo: las cifras del reporte técnico.
+      expect(result.totalCharacters).toBe(2110704);
+      expect(result.distinctSymbols).toBe(92);
+      expect(result.metrics.originalBytes).toBe(2168287);
+      expect(result.metrics.fileSizeBytes).toBe(1166906);
+    },
+  );
+
+  it('sin respaldo, responde el error de Gutenberg en lugar de inventar el libro', async () => {
+    gutenbergClient.fetchBookText.mockRejectedValueOnce(
+      new BadGatewayException('HTTP 503'),
+    );
+    await expect(service.processHuffmanMetadata(1342)).rejects.toThrow(
+      BadGatewayException,
+    );
   });
 
   it('genera el archivo binario .suf como Buffer (no string) menor a 4.5 MB (B7)', async () => {
@@ -91,10 +110,74 @@ describe('HuffmanService (B5 & B7)', () => {
     );
   });
 
-  it('lanza NotFoundException si el ID no existe en el catálogo', async () => {
+  it('comprime un libro de Gutenberg que no está en el catálogo (enlace)', async () => {
+    gutenbergClient.fetchBookText.mockResolvedValueOnce(
+      'The Project Gutenberg eBook of La Celestina\r\n\r\nTitle: La Celestina\r\nAuthor: Fernando de Rojas\r\nLanguage: Spanish\r\n\r\n*** START OF THE PROJECT GUTENBERG EBOOK LA CELESTINA ***\r\nCalisto y Melibea\r\n*** END OF THE PROJECT GUTENBERG EBOOK LA CELESTINA ***\r\n',
+    );
+
+    const result = await service.processHuffmanMetadata(1619);
+    expect(gutenbergClient.fetchBookText).toHaveBeenCalledWith(1619);
+    expect(result.source).toMatchObject({
+      type: 'gutenberg',
+      id: 1619,
+      title: 'La Celestina',
+      author: 'Fernando de Rojas',
+      language: 'Español',
+    });
+    expect(result.totalCharacters).toBe('Calisto y Melibea'.length);
+  });
+
+  it('lanza NotFoundException si el libro no existe en Gutenberg', async () => {
+    gutenbergClient.fetchBookText.mockRejectedValueOnce(
+      new NotFoundException('No existe'),
+    );
     await expect(service.processHuffmanMetadata(999999)).rejects.toThrow(
       NotFoundException,
     );
+  });
+
+  it('recorta a 200 caracteres el título de un archivo subido', () => {
+    const texto = 'abc';
+    const { result } = service.compressUploadedFile(
+      {
+        originalname: 'nota.txt',
+        mimetype: 'text/plain',
+        size: 3,
+        buffer: Buffer.from(texto),
+      },
+      'ñ'.repeat(70_000),
+    );
+    expect(result.source.title).toBe('ñ'.repeat(200));
+  });
+
+  it('rechaza con 400, sin decodificarlo, un .suf que declara más caracteres de los que caben', () => {
+    // Cabecera válida con un símbolo de código "0" y 1 MB de ceros: declara
+    // 8 millones de caracteres. Antes se decodificaba completo en memoria.
+    const datos = 1024 * 1024;
+    const total = datos * 8;
+    const cabecera = Buffer.alloc(21);
+    let o = 0;
+    o = cabecera.write('SUF1', o) + o;
+    o = cabecera.writeUInt32BE(total, o);
+    o = cabecera.writeUInt8(0, o);
+    o = cabecera.writeUInt16BE(1, o);
+    o = cabecera.writeUInt16BE(0, o);
+    o = cabecera.writeUInt8(1, o);
+    o = cabecera.write('a', o) + o;
+    o = cabecera.writeUInt32BE(total, o);
+    o = cabecera.writeUInt8(1, o);
+    cabecera.write('0', o);
+    const bomba = Buffer.concat([cabecera, Buffer.alloc(datos)]);
+
+    const inicio = performance.now();
+    expect(() =>
+      service.decompressUploadedFile({
+        originalname: 'bomba.suf',
+        size: bomba.length,
+        buffer: bomba,
+      }),
+    ).toThrow(/máximo/);
+    expect(performance.now() - inicio).toBeLessThan(100);
   });
 
   it('should compress raw UTF-8 text and return analysis and SUF1 binary', () => {

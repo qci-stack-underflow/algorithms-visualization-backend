@@ -1,4 +1,5 @@
 import {
+  BadGatewayException,
   BadRequestException,
   GatewayTimeoutException,
   Injectable,
@@ -61,9 +62,22 @@ export class GutenbergClient {
         );
       }
 
+      // Gutenberg contesta 503 con una página HTML cuando está saturado o
+      // limita las peticiones (desde Vercel pasa seguido): es un fallo del
+      // servicio, no del libro pedido, así que se responde 502.
       if (!response.ok) {
-        throw new BadRequestException(
-          `Error al consultar Project Gutenberg (HTTP ${response.status}).`,
+        throw new BadGatewayException(
+          `Project Gutenberg no está disponible en este momento (HTTP ${response.status}).`,
+        );
+      }
+
+      // Una página HTML con 200 (aviso, captcha o error) no es el libro: si
+      // se comprimiera, el resultado quedaría en caché como si lo fuera.
+      const contentType =
+        response.headers?.get?.('content-type')?.toLowerCase() ?? '';
+      if (contentType.includes('text/html')) {
+        throw new BadGatewayException(
+          'Project Gutenberg respondió una página HTML en lugar del libro.',
         );
       }
 
@@ -115,6 +129,7 @@ export class GutenbergClient {
       return Buffer.concat(chunks).toString('utf-8');
     } catch (error: unknown) {
       if (
+        error instanceof BadGatewayException ||
         error instanceof BadRequestException ||
         error instanceof NotFoundException ||
         error instanceof PayloadTooLargeException ||
@@ -136,7 +151,7 @@ export class GutenbergClient {
         );
       }
 
-      throw new BadRequestException('Error al contactar Project Gutenberg.');
+      throw new BadGatewayException('No se pudo contactar Project Gutenberg.');
     } finally {
       clearTimeout(timer);
     }

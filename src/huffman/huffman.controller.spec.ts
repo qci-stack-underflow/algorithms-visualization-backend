@@ -50,7 +50,7 @@ describe('HuffmanController (B5, B6 & B7)', () => {
     }).compile();
 
     controller = module.get<HuffmanController>(HuffmanController);
-    gutenbergClient = module.get<GutenbergClient>(GutenbergClient);
+    gutenbergClient = module.get(GutenbergClient);
   });
 
   it('GET /huffman/books devuelve el catálogo de libros predefinidos', () => {
@@ -98,9 +98,14 @@ describe('HuffmanController (B5, B6 & B7)', () => {
       HuffmanController.prototype.compressByIdDownload,
     ];
 
-    for (const method of methods) {
-      const headers: Array<{ name: string; value: string }> =
-        Reflect.getMetadata(HEADERS_METADATA, method) ?? [];
+    for (const name of methods) {
+      const handler = Object.getOwnPropertyDescriptor(
+        HuffmanController.prototype,
+        name,
+      )?.value as object;
+      const headers =
+        (Reflect.getMetadata(HEADERS_METADATA, handler) as
+          Array<{ name: string; value: string }> | undefined) ?? [];
       expect(headers).toEqual(
         expect.arrayContaining([
           { name: 'Cache-Control', value: HUFFMAN_CACHE_CONTROL },
@@ -118,7 +123,10 @@ describe('HuffmanController (B5, B6 & B7)', () => {
     );
   });
 
-  it('lanza 404 NotFoundException cuando el ID no existe', async () => {
+  it('lanza 404 NotFoundException cuando el libro no existe en Gutenberg', async () => {
+    gutenbergClient.fetchBookText.mockRejectedValueOnce(
+      new NotFoundException('No existe'),
+    );
     await expect(controller.compressByIdMetadata(999999)).rejects.toThrow(
       NotFoundException,
     );

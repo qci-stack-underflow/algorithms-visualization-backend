@@ -15,7 +15,7 @@ Author: Miguel de Cervantes Saavedra
 
         
 Release date: December 1, 1999 [eBook #2000]
-                Most recently updated: January 17, 2021
+                Most recently updated: November 5, 2026
 
 Language: Spanish
 
@@ -42,22 +42,22 @@ por Miguel de Cervantes Saavedra
 El ingenioso hidalgo don Quijote de la Mancha
 
 
-  
+
 Tasa
 
-  
+
 Testimonio de las erratas
 
-  
+
 El Rey
 
-  
+
 Al Duque de Béjar
 
-  
+
 Prólogo
 
-  
+
 Al libro de don Quijote de la Mancha
 
 
@@ -233,19 +233,19 @@ costa de su sudor
 Segunda parte del ingenioso caballero don Quijote de la Mancha
 
 
-  
+
 Tasa
 
-  
+
 Fee de erratas
 
-  
+
 Aprobaciones
 
-  
+
 Dedicatoria, al conde de Lemos
 
-  
+
 Prólogo al lector
 
 
@@ -37700,8 +37700,6 @@ historias de los libros de caballerías, que, por las de mi verdadero don
 Quijote, van ya tropezando, y han de caer del todo, sin duda alguna. Vale.
 
 Fin
-
-
 
 
 
