@@ -290,4 +290,43 @@ describe('Huffman Endpoints (e2e - B8)', () => {
       })
       .expect(400);
   });
+
+  it('POST /huffman/compress/file?metadata=false devuelve únicamente el binario .suf sin JSON', async () => {
+    const customText = '  Texto crudo con espacios y salto final.\n';
+
+    const uploadRes = await request(app.getHttpServer())
+      .post('/huffman/compress/file?metadata=false')
+      .field('title', 'Sin Metadata')
+      .attach('file', Buffer.from(customText, 'utf-8'), {
+        filename: 'raw.txt',
+        contentType: 'text/plain',
+      })
+      .buffer(true)
+      .parse((res, callback) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
+        res.on('end', () => callback(null, Buffer.concat(chunks)));
+      })
+      .expect(200);
+
+    expect(uploadRes.headers['content-type']).toContain(
+      'application/octet-stream',
+    );
+    expect(uploadRes.headers['content-disposition']).toContain('raw.suf');
+
+    const sufBuffer = uploadRes.body as Buffer;
+    expect(sufBuffer.subarray(0, 4).toString('ascii')).toBe(SUF_MAGIC);
+
+    const { header, decodedText } = readSuf(sufBuffer);
+    expect(header.title).toBe('Sin Metadata');
+    expect(decodedText).toBe(customText);
+
+    await request(app.getHttpServer())
+      .post('/huffman/compress/file?metadata=maybe')
+      .attach('file', Buffer.from(customText, 'utf-8'), {
+        filename: 'raw.txt',
+        contentType: 'text/plain',
+      })
+      .expect(400);
+  });
 });

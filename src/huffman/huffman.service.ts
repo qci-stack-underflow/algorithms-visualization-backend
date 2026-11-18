@@ -162,6 +162,7 @@ export class HuffmanService {
   compressUploadedFile(
     file?: UploadedTextFile,
     customTitle?: string,
+    includeMetadata = true,
   ): {
     buffer: Buffer;
     filename: string;
@@ -236,15 +237,21 @@ export class HuffmanService {
       clean: false,
     });
 
-    const jsonBuffer = Buffer.from(JSON.stringify(result), 'utf-8');
-    const lengthPrefix = Buffer.alloc(4);
-    lengthPrefix.writeUInt32BE(jsonBuffer.byteLength, 0);
+    let responseBuffer: Buffer;
+    if (includeMetadata) {
+      const jsonBuffer = Buffer.from(JSON.stringify(result), 'utf-8');
+      const lengthPrefix = Buffer.alloc(4);
+      lengthPrefix.writeUInt32BE(jsonBuffer.byteLength, 0);
+      responseBuffer = Buffer.concat([lengthPrefix, jsonBuffer, sufBuffer]);
+    } else {
+      responseBuffer = sufBuffer;
+    }
 
-    const combinedBuffer = Buffer.concat([lengthPrefix, jsonBuffer, sufBuffer]);
-
-    if (combinedBuffer.byteLength > VERCEL_MAX_PAYLOAD_BYTES) {
+    if (responseBuffer.byteLength > VERCEL_MAX_PAYLOAD_BYTES) {
       throw new PayloadTooLargeException(
-        'La respuesta combinada excede el límite de 4.5 MB de Vercel.',
+        includeMetadata
+          ? 'La respuesta combinada excede el límite de 4.5 MB de Vercel.'
+          : 'El archivo .suf generado excede el límite de 4.5 MB de Vercel.',
       );
     }
 
@@ -253,7 +260,7 @@ export class HuffmanService {
     const sufFilename = `${safeDispositionName}.suf`;
 
     return {
-      buffer: combinedBuffer,
+      buffer: responseBuffer,
       filename: sufFilename,
       result,
       sufBuffer,

@@ -9,10 +9,7 @@ import { BOOKS_CATALOG } from '../books/books.catalog';
 import { GutenbergClient } from '../books/gutenberg.client';
 import { LocalBackupService } from '../books/local-backup.service';
 import { VERCEL_MAX_PAYLOAD_BYTES } from '../types/huffman.types';
-import {
-  HUFFMAN_CACHE_CONTROL,
-  HuffmanController,
-} from './huffman.controller';
+import { HUFFMAN_CACHE_CONTROL, HuffmanController } from './huffman.controller';
 import { HuffmanService } from './huffman.service';
 
 describe('HuffmanController (B5, B6 & B7)', () => {
@@ -27,9 +24,11 @@ describe('HuffmanController (B5, B6 & B7)', () => {
         {
           provide: GutenbergClient,
           useValue: {
-            fetchBookText: jest.fn().mockResolvedValue(
-              '*** START OF THE PROJECT GUTENBERG EBOOK DON QUIJOTE ***\nEn un lugar de la Mancha\n*** END OF THE PROJECT GUTENBERG EBOOK DON QUIJOTE ***',
-            ),
+            fetchBookText: jest
+              .fn()
+              .mockResolvedValue(
+                '*** START OF THE PROJECT GUTENBERG EBOOK DON QUIJOTE ***\nEn un lugar de la Mancha\n*** END OF THE PROJECT GUTENBERG EBOOK DON QUIJOTE ***',
+              ),
           },
         },
         {
@@ -147,5 +146,41 @@ describe('HuffmanController (B5, B6 & B7)', () => {
     expect(parsedResult.source.title).toBe('Título Cliente');
     expect(parsedResult.totalCharacters).toBe(sampleText.length);
     expect(sufPart.subarray(0, 4).toString('ascii')).toBe('SUF1');
+  });
+
+  it('POST /huffman/compress/file?metadata=false devuelve únicamente el binario .suf sin JSON', async () => {
+    const sampleText = 'Archivo comprimido sin metadatos.';
+    const streamable = controller.compressFromClient(
+      {
+        originalname: 'sin-meta.txt',
+        mimetype: 'text/plain',
+        size: Buffer.byteLength(sampleText, 'utf-8'),
+        buffer: Buffer.from(sampleText, 'utf-8'),
+      },
+      'Sin Meta',
+      'false',
+    );
+
+    const chunks: Buffer[] = [];
+    for await (const chunk of streamable.getStream()) {
+      chunks.push(chunk as Buffer);
+    }
+    const sufBuffer = Buffer.concat(chunks);
+    expect(sufBuffer.subarray(0, 4).toString('ascii')).toBe('SUF1');
+  });
+
+  it('POST /huffman/compress/file lanza 400 cuando metadata no es true o false', () => {
+    expect(() =>
+      controller.compressFromClient(
+        {
+          originalname: 'test.txt',
+          mimetype: 'text/plain',
+          size: 4,
+          buffer: Buffer.from('hola', 'utf-8'),
+        },
+        undefined,
+        'invalido',
+      ),
+    ).toThrow(BadRequestException);
   });
 });

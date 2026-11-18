@@ -158,6 +158,27 @@ describe('HuffmanService (B5 & B7)', () => {
     expect(decompressed.decodedText).toBe(text);
   });
 
+  it('devuelve únicamente el binario .suf (sin JSON) cuando includeMetadata es false', () => {
+    const text = 'Solo archivo binario .suf sin metadatos JSON.';
+    const output = service.compressUploadedFile(
+      {
+        originalname: 'solo-suf.txt',
+        mimetype: 'text/plain',
+        size: Buffer.byteLength(text, 'utf-8'),
+        buffer: Buffer.from(text, 'utf-8'),
+      },
+      'Solo SUF',
+      false,
+    );
+
+    expect(output.buffer.equals(output.sufBuffer)).toBe(true);
+    expect(output.buffer.subarray(0, 4).toString('ascii')).toBe(SUF_MAGIC);
+
+    const decompressed = service.decompressBinary(output.buffer);
+    expect(decompressed.header.title).toBe('Solo SUF');
+    expect(decompressed.decodedText).toBe(text);
+  });
+
   it('preserva saltos de línea y espacios iniciales/finales al comprimir un archivo subido', () => {
     const rawText = '  hola mundo\r\n';
     const output = service.compressUploadedFile({

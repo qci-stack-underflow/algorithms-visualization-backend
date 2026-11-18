@@ -10,6 +10,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   StreamableFile,
   UploadedFile,
   UseFilters,
@@ -24,8 +25,29 @@ import {
 } from '../types/huffman.types';
 import { HuffmanService, type UploadedTextFile } from './huffman.service';
 
-export const HUFFMAN_CACHE_CONTROL =
-  'public, max-age=86400, s-maxage=604800';
+export const HUFFMAN_CACHE_CONTROL = 'public, max-age=86400, s-maxage=604800';
+
+/**
+ * Parsea el parámetro de consulta `metadata` (`"true"` | `"false"`), devolviendo `defaultValue` si no se envía.
+ */
+function parseMetadataFlag(
+  raw: string | undefined,
+  defaultValue: boolean,
+): boolean {
+  if (raw === undefined) {
+    return defaultValue;
+  }
+  const normalized = raw.trim().toLowerCase();
+  if (normalized === 'true') {
+    return true;
+  }
+  if (normalized === 'false') {
+    return false;
+  }
+  throw new BadRequestException(
+    'El parámetro "metadata" debe ser "true" o "false".',
+  );
+}
 
 @Controller('huffman')
 @UseFilters(HuffmanExceptionFilter)
@@ -113,10 +135,13 @@ export class HuffmanController {
   compressFromClient(
     @UploadedFile() file?: UploadedTextFile,
     @Body('title') title?: string,
+    @Query('metadata') metadata?: string,
   ): StreamableFile {
+    const includeMetadata = parseMetadataFlag(metadata, true);
     const { buffer, filename } = this.huffmanService.compressUploadedFile(
       file,
       title,
+      includeMetadata,
     );
     return new StreamableFile(buffer, {
       type: 'application/octet-stream',
