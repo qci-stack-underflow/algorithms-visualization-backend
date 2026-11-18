@@ -16,7 +16,7 @@ import { HuffmanService } from './huffman.service';
 
 describe('HuffmanController (B5, B6 & B7)', () => {
   let controller: HuffmanController;
-  let gutenbergClient: GutenbergClient;
+  let gutenbergClient: { fetchBookText: jest.Mock };
   let rapidApiClient: { searchBooks: jest.Mock };
 
   beforeEach(async () => {
