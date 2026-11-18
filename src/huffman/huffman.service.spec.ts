@@ -6,6 +6,7 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import { GutenbergClient } from '../books/gutenberg.client';
 import { LocalBackupService } from '../books/local-backup.service';
+import { RapidApiGutenbergClient } from '../books/rapidapi-gutenberg.client';
 import {
   HuffmanResult,
   MAX_UPLOAD_FILE_SIZE_BYTES,
@@ -32,6 +33,10 @@ describe('HuffmanService (B5 & B7)', () => {
         HuffmanService,
         { provide: GutenbergClient, useValue: gutenbergClient },
         { provide: LocalBackupService, useValue: new LocalBackupService() },
+        {
+          provide: RapidApiGutenbergClient,
+          useValue: { searchBooks: jest.fn().mockResolvedValue([]) },
+        },
       ],
     }).compile();
 

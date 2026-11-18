@@ -8,6 +8,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BOOKS_CATALOG } from '../books/books.catalog';
 import { GutenbergClient } from '../books/gutenberg.client';
 import { LocalBackupService } from '../books/local-backup.service';
+import { RapidApiGutenbergClient } from '../books/rapidapi-gutenberg.client';
 import { VERCEL_MAX_PAYLOAD_BYTES } from '../types/huffman.types';
 import { HUFFMAN_CACHE_CONTROL, HuffmanController } from './huffman.controller';
 import { HuffmanService } from './huffman.service';
@@ -34,6 +35,10 @@ describe('HuffmanController (B5, B6 & B7)', () => {
         {
           provide: LocalBackupService,
           useValue: new LocalBackupService(),
+        },
+        {
+          provide: RapidApiGutenbergClient,
+          useValue: { searchBooks: jest.fn().mockResolvedValue([]) },
         },
       ],
     }).compile();

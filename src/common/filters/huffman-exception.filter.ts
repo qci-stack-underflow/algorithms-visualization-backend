@@ -20,8 +20,7 @@ export class HuffmanExceptionFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const responseBody = exception.getResponse() as
-        | string
-        | { message?: string | string[] };
+        string | { message?: string | string[] };
       const rawMessage =
         typeof responseBody === 'string'
           ? responseBody
@@ -33,7 +32,7 @@ export class HuffmanExceptionFilter implements ExceptionFilter {
       typeof exception === 'object' &&
       exception !== null &&
       'status' in exception &&
-      typeof (exception as { status: unknown }).status === 'number'
+      typeof exception.status === 'number'
     ) {
       status = (exception as { status: number }).status;
       message =
@@ -60,13 +59,15 @@ export class HuffmanExceptionFilter implements ExceptionFilter {
       case HttpStatus.PAYLOAD_TOO_LARGE:
         errorType = 'Payload Too Large';
         break;
+      case HttpStatus.BAD_GATEWAY:
+        errorType = 'Bad Gateway';
+        break;
       case HttpStatus.GATEWAY_TIMEOUT:
         errorType = 'Gateway Timeout';
         break;
     }
 
-    response
-      .setHeader?.('Content-Type', 'application/json; charset=utf-8');
+    response.setHeader?.('Content-Type', 'application/json; charset=utf-8');
     response.status(status).json({
       statusCode: status,
       error: errorType,

@@ -6,6 +6,7 @@ import {
   PayloadTooLargeException,
 } from '@nestjs/common';
 import {
+  BookInfo,
   HUFFMAN_PSEUDOCODE,
   HuffmanResult,
   MAX_UPLOAD_FILE_SIZE_BYTES,
@@ -28,6 +29,7 @@ import {
 } from '../books/books.catalog';
 import { GutenbergClient } from '../books/gutenberg.client';
 import { LocalBackupService } from '../books/local-backup.service';
+import { RapidApiGutenbergClient } from '../books/rapidapi-gutenberg.client';
 
 export interface UploadedTextFile {
   originalname?: string;
@@ -41,6 +43,7 @@ export class HuffmanService {
   constructor(
     private readonly gutenbergClient: GutenbergClient,
     private readonly localBackup: LocalBackupService,
+    private readonly rapidApiClient: RapidApiGutenbergClient,
   ) {}
 
   getHuffman() {
@@ -98,6 +101,18 @@ export class HuffmanService {
 
   getCatalog(): readonly CatalogBook[] {
     return BOOKS_CATALOG;
+  }
+
+  async searchBooks(query?: string): Promise<{ result: BookInfo[] }> {
+    const normalized = query?.trim() ?? '';
+    if (normalized.length === 0) {
+      throw new BadRequestException(
+        'El parámetro de búsqueda "q" es obligatorio y no puede estar vacío.',
+      );
+    }
+
+    const result = await this.rapidApiClient.searchBooks(normalized);
+    return { result };
   }
 
   async getBookText(
