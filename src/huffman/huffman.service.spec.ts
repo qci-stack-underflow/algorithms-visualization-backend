@@ -136,6 +136,30 @@ describe('HuffmanService (B5 & B7)', () => {
     );
   });
 
+  it('rechaza con 400 un archivo que no está en UTF-8 (Latin-1)', () => {
+    // "Canción" en Latin-1: la ó es el byte 0xF3.
+    const latin1 = Buffer.from([0x43, 0x61, 0x6e, 0x63, 0x69, 0xf3, 0x6e]);
+    expect(() =>
+      service.compressUploadedFile({
+        originalname: 'cancion.txt',
+        mimetype: 'text/plain',
+        size: latin1.length,
+        buffer: latin1,
+      }),
+    ).toThrow(/UTF-8/);
+  });
+
+  it('conserva el BOM de un archivo subido (se comprime tal como llega)', () => {
+    const conBom = Buffer.from('\uFEFFhola', 'utf-8');
+    const { result } = service.compressUploadedFile({
+      originalname: 'bom.txt',
+      mimetype: 'text/plain',
+      size: conBom.length,
+      buffer: conBom,
+    });
+    expect(result.totalCharacters).toBe(5);
+  });
+
   it('recorta a 200 caracteres el título de un archivo subido', () => {
     const texto = 'abc';
     const { result } = service.compressUploadedFile(

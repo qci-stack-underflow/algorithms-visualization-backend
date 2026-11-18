@@ -84,7 +84,7 @@ pnpm start:dev           # http://localhost:3000
 Pruebas:
 
 ```bash
-pnpm test                # 127 pruebas unitarias
+pnpm test                # 260 pruebas unitarias
 pnpm test:e2e            # pruebas end-to-end
 ```
 

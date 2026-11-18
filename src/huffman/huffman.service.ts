@@ -251,7 +251,20 @@ export class HuffmanService {
       );
     }
 
-    const rawText = file.buffer.toString('utf-8');
+    // Huffman cuenta caracteres Unicode: un archivo en Latin-1 u otra
+    // codificación tendría bytes inválidos que toString('utf-8') cambia por
+    // U+FFFD, y la compresión perdería sus acentos sin avisar.
+    let rawText: string;
+    try {
+      rawText = new TextDecoder('utf-8', {
+        fatal: true,
+        ignoreBOM: true,
+      }).decode(file.buffer);
+    } catch {
+      throw new BadRequestException(
+        'El archivo no está en UTF-8. Guárdalo con codificación UTF-8 y vuelve a subirlo.',
+      );
+    }
     if (rawText.length === 0) {
       throw new BadRequestException(
         'El archivo de texto proporcionado está vacío.',
