@@ -1,4 +1,5 @@
 import {
+  BadGatewayException,
   BadRequestException,
   GatewayTimeoutException,
   NotFoundException,
@@ -10,7 +11,9 @@ import {
   GutenbergClient,
 } from './gutenberg.client';
 
-function createStreamFromChunks(chunks: Uint8Array[]): ReadableStream<Uint8Array> {
+function createStreamFromChunks(
+  chunks: Uint8Array[],
+): ReadableStream<Uint8Array> {
   let index = 0;
   return new ReadableStream<Uint8Array>({
     pull(controller) {
@@ -59,7 +62,7 @@ describe('GutenbergClient (B2)', () => {
       status: 200,
       headers: new Headers({ 'content-length': String(content.length) }),
       body: createStreamFromChunks([Buffer.from(content, 'utf-8')]),
-    } as Response);
+    });
 
     const result = await client.fetchBookText(11);
 
@@ -70,7 +73,7 @@ describe('GutenbergClient (B2)', () => {
         method: 'GET',
         headers: expect.objectContaining({
           'User-Agent': GUTENBERG_USER_AGENT,
-        }),
+        }) as unknown,
       }),
     );
   });
@@ -82,7 +85,7 @@ describe('GutenbergClient (B2)', () => {
       status: 200,
       headers: new Headers(),
       body: createStreamFromChunks([oversizedChunk]),
-    } as Response);
+    });
 
     await expect(client.fetchBookText(2000)).rejects.toThrow(
       PayloadTooLargeException,
@@ -113,8 +116,45 @@ describe('GutenbergClient (B2)', () => {
       ok: false,
       status: 404,
       headers: new Headers(),
-    } as Response);
+    });
 
-    await expect(client.fetchBookText(99999)).rejects.toThrow(NotFoundException);
+    await expect(client.fetchBookText(99999)).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('lanza 502 BadGatewayException si Gutenberg responde 503 (saturado o bloqueado)', async () => {
+    fetchSpy.mockResolvedValue({
+      ok: false,
+      status: 503,
+      headers: new Headers({ 'content-type': 'text/html; charset=utf-8' }),
+    });
+
+    await expect(client.fetchBookText(2000)).rejects.toThrow(
+      BadGatewayException,
+    );
+  });
+
+  it('lanza 502 si Gutenberg responde 200 con una página HTML en lugar del libro', async () => {
+    const html =
+      '<!DOCTYPE html><html><title>Temporarily unavailable</title></html>';
+    fetchSpy.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'content-type': 'text/html; charset=utf-8' }),
+      body: createStreamFromChunks([Buffer.from(html, 'utf-8')]),
+    });
+
+    await expect(client.fetchBookText(2000)).rejects.toThrow(
+      BadGatewayException,
+    );
+  });
+
+  it('lanza 502 si no se puede conectar con Gutenberg', async () => {
+    fetchSpy.mockRejectedValue(new TypeError('fetch failed'));
+
+    await expect(client.fetchBookText(2000)).rejects.toThrow(
+      BadGatewayException,
+    );
   });
 });

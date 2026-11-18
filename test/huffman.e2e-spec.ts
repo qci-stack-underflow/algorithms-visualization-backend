@@ -1,6 +1,8 @@
 import {
+  BadGatewayException,
   GatewayTimeoutException,
   INestApplication,
+  NotFoundException,
   PayloadTooLargeException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -181,7 +183,7 @@ describe('Huffman Endpoints (e2e - B8)', () => {
     expect(decodedText).toBe(expectedCleanText);
   });
 
-  it('valida los errores HTTP 400, 404, 413 y 504 en los endpoints', async () => {
+  it('valida los errores HTTP 400, 404, 413, 502 y 504 en los endpoints', async () => {
     // 400: ID no numérico o negativo
     await request(app.getHttpServer()).get('/huffman/books/abc').expect(400);
 
@@ -189,8 +191,33 @@ describe('Huffman Endpoints (e2e - B8)', () => {
       .get('/huffman/books/-5/file')
       .expect(400);
 
-    // 404: Libro inexistente
+    // 404: Libro inexistente en Project Gutenberg
+    fetchBookTextMock.mockRejectedValueOnce(
+      new NotFoundException('El libro con ID 999999 no existe.'),
+    );
     await request(app.getHttpServer()).get('/huffman/books/999999').expect(404);
+
+    // 502: Gutenberg no disponible y el libro no tiene respaldo local
+    fetchBookTextMock.mockRejectedValueOnce(
+      new BadGatewayException(
+        'Project Gutenberg no está disponible (HTTP 503).',
+      ),
+    );
+    await request(app.getHttpServer()).get('/huffman/books/1342').expect(502);
+
+    // Con respaldo local, el mismo 503 de Gutenberg no es un error: se sirve
+    // el libro completo desde assets/catalog-backup/.
+    fetchBookTextMock.mockRejectedValueOnce(
+      new BadGatewayException(
+        'Project Gutenberg no está disponible (HTTP 503).',
+      ),
+    );
+    const respaldo = await request(app.getHttpServer())
+      .get('/huffman/books/2000')
+      .expect(200);
+    expect((respaldo.body as { totalCharacters: number }).totalCharacters).toBe(
+      2110704,
+    );
 
     // 413: Libro demasiado grande (> 4.5 MB)
     fetchBookTextMock.mockRejectedValueOnce(
@@ -201,16 +228,16 @@ describe('Huffman Endpoints (e2e - B8)', () => {
     const res413 = await request(app.getHttpServer())
       .get('/huffman/books/2000')
       .expect(413);
-    expect(res413.body.statusCode).toBe(413);
+    expect((res413.body as { statusCode: number }).statusCode).toBe(413);
 
     // 504: Timeout de Gutenberg (> 10s)
     fetchBookTextMock.mockRejectedValueOnce(
       new GatewayTimeoutException('Project Gutenberg no respondió a tiempo.'),
     );
     const res504 = await request(app.getHttpServer())
-      .get('/huffman/books/2000/file')
+      .get('/huffman/books/1342/file')
       .expect(504);
-    expect(res504.body.statusCode).toBe(504);
+    expect((res504.body as { statusCode: number }).statusCode).toBe(504);
   });
 
   it('verifica las cabeceras CORS y preflight OPTIONS para despliegue en Vercel (B9)', async () => {

@@ -198,9 +198,12 @@ Errores: 400 si la entrada no es válida (no son números, más de 50 elementos,
 
 #### Códigos de Error en `/huffman`
 - **`400 Bad Request`**: El parámetro `:id` no es un número entero positivo válido.
-- **`404 Not Found`**: El libro solicitado no existe en el catálogo ni en Project Gutenberg.
+- **`404 Not Found`**: El libro solicitado no existe en Project Gutenberg.
 - **`413 Payload Too Large`**: El libro o la respuesta supera el límite de **4.5 MB** de Vercel Serverless Functions.
-- **`504 Gateway Timeout`**: Project Gutenberg no respondió dentro del tiempo límite de **10 segundos**.
+- **`502 Bad Gateway`**: Project Gutenberg no está disponible (por ejemplo, responde `503` o una página HTML) y el libro no tiene respaldo local.
+- **`504 Gateway Timeout`**: Project Gutenberg no respondió dentro del tiempo límite de **10 segundos** y el libro no tiene respaldo local.
+
+`/huffman/books/:id` acepta cualquier libro de Project Gutenberg, no solo los del catálogo. Don Quijote (`2000`), Frankenstein (`84`) y Los pazos de Ulloa (`18005`) tienen el libro completo en `assets/catalog-backup/` y funcionan aunque Gutenberg no responda, cosa que pasa seguido desde Vercel.
 
 #### Comandos locales para probar Huffman
 ```bash
