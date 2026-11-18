@@ -6,7 +6,12 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import { GutenbergClient } from '../books/gutenberg.client';
 import { LocalBackupService } from '../books/local-backup.service';
-import { SUF_MAGIC, VERCEL_MAX_PAYLOAD_BYTES } from '../types/huffman.types';
+import {
+  HuffmanResult,
+  MAX_UPLOAD_FILE_SIZE_BYTES,
+  SUF_MAGIC,
+  VERCEL_MAX_PAYLOAD_BYTES,
+} from '../types/huffman.types';
 import { HuffmanService } from './huffman.service';
 
 describe('HuffmanService (B5 & B7)', () => {
@@ -117,5 +122,71 @@ describe('HuffmanService (B5 & B7)', () => {
     const raw =
       '\uFEFF*** START OF THE PROJECT GUTENBERG EBOOK TEST ***\nContenido real\n*** END OF THE PROJECT GUTENBERG EBOOK TEST ***';
     expect(service.cleanText(raw)).toBe('Contenido real');
+  });
+
+  it('procesa un archivo .txt subido por el cliente y genera el binario combinado [uint32][JSON][.suf]', () => {
+    const text = 'En un lugar de la Mancha, de cuyo nombre no quiero acordarme.';
+    const output = service.compressUploadedFile(
+      {
+        originalname: 'mi-quijote.txt',
+        mimetype: 'text/plain',
+        size: Buffer.byteLength(text, 'utf-8'),
+        buffer: Buffer.from(text, 'utf-8'),
+      },
+      'Mi Quijote Personalizado',
+    );
+
+    expect(output.filename).toBe('mi-quijote.suf');
+    expect(output.result.source.type).toBe('upload');
+    expect(output.result.source.title).toBe('Mi Quijote Personalizado');
+    if (output.result.source.type === 'upload') {
+      expect(output.result.source.filename).toBe('mi-quijote.txt');
+      expect(output.result.source.mimeType).toBe('text/plain');
+    }
+
+    const jsonLength = output.buffer.readUInt32BE(0);
+    const jsonBytes = output.buffer.subarray(4, 4 + jsonLength);
+    const sufBytes = output.buffer.subarray(4 + jsonLength);
+
+    const parsedJson = JSON.parse(jsonBytes.toString('utf-8')) as HuffmanResult;
+    expect(parsedJson.totalCharacters).toBe(text.length);
+    expect(parsedJson.source.title).toBe('Mi Quijote Personalizado');
+
+    const decompressed = service.decompressBinary(sufBytes);
+    expect(decompressed.header.magic).toBe(SUF_MAGIC);
+    expect(decompressed.decodedText).toBe(text);
+  });
+
+  it('lanza 400 o 413 cuando el archivo subido es inválido, vacío o supera los 4 MB', () => {
+    expect(() => service.compressUploadedFile(undefined)).toThrow(
+      BadRequestException,
+    );
+
+    expect(() =>
+      service.compressUploadedFile({
+        originalname: 'documento.pdf',
+        mimetype: 'application/pdf',
+        size: 10,
+        buffer: Buffer.from('contenido'),
+      }),
+    ).toThrow(BadRequestException);
+
+    expect(() =>
+      service.compressUploadedFile({
+        originalname: 'vacio.txt',
+        mimetype: 'text/plain',
+        size: 0,
+        buffer: Buffer.from('   \r\n  '),
+      }),
+    ).toThrow(BadRequestException);
+
+    expect(() =>
+      service.compressUploadedFile({
+        originalname: 'grande.txt',
+        mimetype: 'text/plain',
+        size: MAX_UPLOAD_FILE_SIZE_BYTES + 1,
+        buffer: Buffer.alloc(16, 65),
+      }),
+    ).toThrow(PayloadTooLargeException);
   });
 });

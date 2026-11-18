@@ -1,19 +1,28 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   Header,
+  HttpCode,
+  HttpStatus,
   InternalServerErrorException,
   Param,
   ParseIntPipe,
   Post,
   StreamableFile,
+  UploadedFile,
   UseFilters,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { CatalogBook } from '../books/books.catalog';
 import { HuffmanExceptionFilter } from '../common/filters/huffman-exception.filter';
-import { HuffmanResult } from '../types/huffman.types';
-import { HuffmanService } from './huffman.service';
+import {
+  HuffmanResult,
+  MAX_UPLOAD_FILE_SIZE_BYTES,
+} from '../types/huffman.types';
+import { HuffmanService, type UploadedTextFile } from './huffman.service';
 
 export const HUFFMAN_CACHE_CONTROL =
   'public, max-age=86400, s-maxage=604800';
@@ -94,7 +103,25 @@ export class HuffmanController {
   }
 
   @Post('compress/file')
-  compressFromClient() {
-    return 'compressed .txt file from client with metadata';
+  @HttpCode(HttpStatus.OK)
+  @Header('Content-Type', 'application/octet-stream')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: MAX_UPLOAD_FILE_SIZE_BYTES },
+    }),
+  )
+  compressFromClient(
+    @UploadedFile() file?: UploadedTextFile,
+    @Body('title') title?: string,
+  ): StreamableFile {
+    const { buffer, filename } = this.huffmanService.compressUploadedFile(
+      file,
+      title,
+    );
+    return new StreamableFile(buffer, {
+      type: 'application/octet-stream',
+      disposition: `attachment; filename="${filename}"`,
+      length: buffer.byteLength,
+    });
   }
 }

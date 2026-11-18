@@ -112,4 +112,40 @@ describe('HuffmanController (B5, B6 & B7)', () => {
       NotFoundException,
     );
   });
+
+  it('POST /huffman/compress/file devuelve un StreamableFile con el binario combinado [uint32][JSON][.suf]', async () => {
+    const sampleText = 'Texto de prueba subido desde el cliente.';
+    const streamable = controller.compressFromClient(
+      {
+        originalname: 'cliente.txt',
+        mimetype: 'text/plain',
+        size: Buffer.byteLength(sampleText, 'utf-8'),
+        buffer: Buffer.from(sampleText, 'utf-8'),
+      },
+      'Título Cliente',
+    );
+
+    expect(streamable).toBeInstanceOf(StreamableFile);
+    const headers = streamable.getHeaders();
+    expect(headers.type).toBe('application/octet-stream');
+    expect(headers.disposition).toContain('cliente.suf');
+
+    const chunks: Buffer[] = [];
+    for await (const chunk of streamable.getStream()) {
+      chunks.push(chunk as Buffer);
+    }
+    const combinedBuffer = Buffer.concat(chunks);
+    const jsonLen = combinedBuffer.readUInt32BE(0);
+    const jsonStr = combinedBuffer.subarray(4, 4 + jsonLen).toString('utf-8');
+    const sufPart = combinedBuffer.subarray(4 + jsonLen);
+
+    const parsedResult = JSON.parse(jsonStr) as {
+      source: { type: string; title: string };
+      totalCharacters: number;
+    };
+    expect(parsedResult.source.type).toBe('upload');
+    expect(parsedResult.source.title).toBe('Título Cliente');
+    expect(parsedResult.totalCharacters).toBe(sampleText.length);
+    expect(sufPart.subarray(0, 4).toString('ascii')).toBe('SUF1');
+  });
 });

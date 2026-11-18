@@ -193,6 +193,7 @@ Errores: 400 si la entrada no es válida (no son números, más de 50 elementos,
 | GET | `/huffman/books` | Catálogo de libros predefinidos de Project Gutenberg (`id`, `title`, `author`, `language`, `size`, `sizeBytes`) | `Cache-Control: public, max-age=86400, s-maxage=604800` |
 | GET | `/huffman/books/:id` | Descarga, limpia y comprime el libro con Huffman; devuelve el árbol plano (`nodes`), pasos animables (`steps`), tabla de frecuencias (`table`), códigos (`codes`), métricas (`metrics`) y vista previa (`preview`) | `Cache-Control: public, max-age=86400, s-maxage=604800` |
 | GET | `/huffman/books/:id/file` | Genera y descarga el archivo binario comprimido `.suf` (`SUF1`) como `Buffer` (`StreamableFile`) | `Content-Type: application/octet-stream`, `Content-Disposition: attachment; filename="book_:id.suf"`, `Cache-Control` |
+| POST | `/huffman/compress/file` | Recibe un archivo `.txt` vía `multipart/form-data` (`file`, `title` opcional) y devuelve un stream binario combinado `[uint32 BE jsonLength][JSON HuffmanResult][binario .suf]` | `Content-Type: application/octet-stream`, `Content-Disposition: attachment; filename="<nombre>.suf"` |
 
 #### Códigos de Error en `/huffman`
 - **`400 Bad Request`**: El parámetro `:id` no es un número entero positivo válido.

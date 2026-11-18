@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   GatewayTimeoutException,
   Injectable,
   NotFoundException,
@@ -7,6 +8,8 @@ import {
 import {
   HUFFMAN_PSEUDOCODE,
   HuffmanResult,
+  MAX_UPLOAD_FILE_SIZE_BYTES,
+  UserFileSourceInfo,
   VERCEL_MAX_PAYLOAD_BYTES,
 } from '../types/huffman.types';
 import { TextCleaner } from '../books/text-cleaner';
@@ -23,6 +26,13 @@ import {
 } from '../books/books.catalog';
 import { GutenbergClient } from '../books/gutenberg.client';
 import { LocalBackupService } from '../books/local-backup.service';
+
+export interface UploadedTextFile {
+  originalname?: string;
+  mimetype?: string;
+  size?: number;
+  buffer?: Buffer;
+}
 
 @Injectable()
 export class HuffmanService {
@@ -147,5 +157,111 @@ export class HuffmanService {
     }
 
     return { buffer, book };
+  }
+
+  compressUploadedFile(
+    file?: UploadedTextFile,
+    customTitle?: string,
+  ): {
+    buffer: Buffer;
+    filename: string;
+    result: HuffmanResult;
+    sufBuffer: Buffer;
+  } {
+    if (!file || !Buffer.isBuffer(file.buffer)) {
+      throw new BadRequestException(
+        'Debe adjuntar un archivo .txt válido en el campo "file".',
+      );
+    }
+
+    const originalname = file.originalname?.trim() || 'upload.txt';
+    const hasExtension = originalname.includes('.');
+    const hasTxtExtension = originalname.toLowerCase().endsWith('.txt');
+    const normalizedMime = file.mimetype?.toLowerCase().trim() ?? '';
+    const isTextPlainMime = normalizedMime.startsWith('text/plain');
+    const isAllowedMime =
+      normalizedMime === '' ||
+      isTextPlainMime ||
+      normalizedMime === 'application/octet-stream';
+
+    if (
+      (hasExtension && !hasTxtExtension) ||
+      !isAllowedMime ||
+      (!hasTxtExtension && !isTextPlainMime)
+    ) {
+      throw new BadRequestException(
+        'Solo se aceptan archivos de texto plano (.txt o text/plain).',
+      );
+    }
+
+    const fileBytes = Math.max(file.buffer.byteLength, file.size ?? 0);
+    if (fileBytes > MAX_UPLOAD_FILE_SIZE_BYTES) {
+      throw new PayloadTooLargeException(
+        'El archivo supera el límite máximo permitido de 4 MB.',
+      );
+    }
+
+    const rawText = file.buffer.toString('utf-8');
+    const cleanedText = this.cleanText(rawText);
+    if (cleanedText.length === 0) {
+      throw new BadRequestException(
+        'El archivo de texto proporcionado está vacío.',
+      );
+    }
+
+    const baseName = originalname.replace(/\.txt$/i, '') || 'document';
+    const title =
+      customTitle && customTitle.trim().length > 0
+        ? customTitle.trim()
+        : baseName;
+    const cleanBytes = Buffer.byteLength(cleanedText, 'utf-8');
+    const formattedSize =
+      cleanBytes < 1024
+        ? `${cleanBytes} B`
+        : cleanBytes < 1024 * 1024
+          ? `${(cleanBytes / 1024).toFixed(1)} KB`
+          : `${(cleanBytes / (1024 * 1024)).toFixed(2)} MB`;
+
+    const source: UserFileSourceInfo = {
+      type: 'upload',
+      filename: hasTxtExtension ? originalname : `${originalname}.txt`,
+      title,
+      size: formattedSize,
+      bytes: cleanBytes,
+      mimeType: 'text/plain',
+    };
+
+    const { result, sufBuffer } = this.compress(cleanedText, {
+      source,
+      title,
+      clean: false,
+    });
+
+    const jsonBuffer = Buffer.from(JSON.stringify(result), 'utf-8');
+    const lengthPrefix = Buffer.alloc(4);
+    lengthPrefix.writeUInt32BE(jsonBuffer.byteLength, 0);
+
+    const combinedBuffer = Buffer.concat([
+      lengthPrefix,
+      jsonBuffer,
+      sufBuffer,
+    ]);
+
+    if (combinedBuffer.byteLength > VERCEL_MAX_PAYLOAD_BYTES) {
+      throw new PayloadTooLargeException(
+        'La respuesta combinada excede el límite de 4.5 MB de Vercel.',
+      );
+    }
+
+    const safeDispositionName =
+      baseName.replace(/[^a-zA-Z0-9._-]/g, '_') || 'document';
+    const sufFilename = `${safeDispositionName}.suf`;
+
+    return {
+      buffer: combinedBuffer,
+      filename: sufFilename,
+      result,
+      sufBuffer,
+    };
   }
 }

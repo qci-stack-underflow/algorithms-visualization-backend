@@ -233,4 +233,61 @@ describe('Huffman Endpoints (e2e - B8)', () => {
     expect(optionsRes.headers['access-control-allow-origin']).toBe('*');
     expect(optionsRes.headers['access-control-allow-methods']).toContain('GET');
   });
+
+  it('POST /huffman/compress/file procesa un archivo .txt multipart y devuelve el stream binario combinado [uint32][JSON][.suf]', async () => {
+    const customText =
+      'En un lugar de la Mancha, de cuyo nombre no quiero acordarme.\nTexto subido por el usuario.';
+
+    const uploadRes = await request(app.getHttpServer())
+      .post('/huffman/compress/file')
+      .field('title', 'Archivo Usuario')
+      .attach('file', Buffer.from(customText, 'utf-8'), {
+        filename: 'usuario.txt',
+        contentType: 'text/plain',
+      })
+      .buffer(true)
+      .parse((res, callback) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
+        res.on('end', () => callback(null, Buffer.concat(chunks)));
+      })
+      .expect(200);
+
+    expect(uploadRes.headers['content-type']).toContain(
+      'application/octet-stream',
+    );
+    expect(uploadRes.headers['content-disposition']).toContain('usuario.suf');
+
+    const combinedBuffer = uploadRes.body as Buffer;
+    expect(Buffer.isBuffer(combinedBuffer)).toBe(true);
+
+    const jsonLength = combinedBuffer.readUInt32BE(0);
+    const jsonBuffer = combinedBuffer.subarray(4, 4 + jsonLength);
+    const sufBuffer = combinedBuffer.subarray(4 + jsonLength);
+
+    const jsonResult = JSON.parse(
+      jsonBuffer.toString('utf-8'),
+    ) as HuffmanResult;
+    expect(jsonResult.source.type).toBe('upload');
+    expect(jsonResult.source.title).toBe('Archivo Usuario');
+    expect(jsonResult.totalCharacters).toBe(customText.length);
+
+    const { header: parsedSuf, decodedText } = readSuf(sufBuffer);
+    expect(parsedSuf.magic).toBe(SUF_MAGIC);
+    expect(parsedSuf.title).toBe('Archivo Usuario');
+    expect(decodedText).toBe(customText);
+
+    // 400 cuando no se adjunta archivo o no es .txt
+    await request(app.getHttpServer())
+      .post('/huffman/compress/file')
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .post('/huffman/compress/file')
+      .attach('file', Buffer.from('no es txt'), {
+        filename: 'imagen.png',
+        contentType: 'image/png',
+      })
+      .expect(400);
+  });
 });
